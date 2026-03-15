@@ -1,0 +1,36 @@
+account:
+  id: "account_05"
+  display_name: "お金・投資入門チャンネル"
+  description: "お金の基礎知識や投資入門を初心者向けに解説するチャンネル"
+  channel_id: "UCxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+credentials:
+  refresh_token_secret: "YOUTUBE_REFRESH_TOKEN_ACCT05"
+  client_id_secret:     "YOUTUBE_CLIENT_ID_ACCT05"
+  client_secret_secret: "YOUTUBE_CLIENT_SECRET_ACCT05"
+
+content:
+  genre: "money"
+  secondary_genres: []
+  video_title_template: null
+  made_for_kids: false
+  default_language: "ja"
+
+tts:
+  voice_id: "ja-JP-Neural2-D"
+  provider: "google_tts"
+  speaking_rate: 0.95
+  pitch: 0.0
+
+schedule:
+  videos_per_week: 2
+  upload_days: [tuesday, friday]
+  upload_hour_utc: 14
+  priority: "medium"
+
+performance:
+  score: 0.0
+  score_rank: null
+  last_scored_at: null
+  baseline_videos_per_week: 2
+  score_history: []

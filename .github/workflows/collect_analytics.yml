@@ -1,0 +1,120 @@
+# 日次 Analytics 収集ワークフロー
+# 毎朝 06:00 UTC に前日分のメトリクスを全有効アカウントから収集し、
+# data/metrics/ にコミットしてダッシュボードを更新する。
+
+name: Collect Analytics - All Accounts
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # 毎日 06:00 UTC（YouTube の処理遅延を考慮）
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "収集対象日 (YYYY-MM-DD、省略時は昨日)"
+        type: string
+        default: ""
+
+jobs:
+  # ──────────────────────────────────────────────
+  # 有効アカウントのマトリクスを動的に生成
+  # ──────────────────────────────────────────────
+  determine-accounts:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.read-registry.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build account matrix from registry
+        id: read-registry
+        run: |
+          python3 -c "
+          import yaml, json
+          with open('config/accounts/accounts_registry.yaml') as f:
+              reg = yaml.safe_load(f)
+          enabled = [a['id'] for a in reg['accounts'] if a.get('enabled', False)]
+          print('matrix=' + json.dumps({'account_id': enabled}))
+          " >> $GITHUB_OUTPUT
+
+  # ──────────────────────────────────────────────
+  # アカウントごとに Analytics を収集
+  # ──────────────────────────────────────────────
+  collect:
+    needs: determine-accounts
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.determine-accounts.outputs.matrix) }}
+      max-parallel: 1       # API クォータ衝突を防ぐため直列実行
+      fail-fast: false      # 1アカウント失敗しても他は続ける
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}   # コミット用に write 権限が必要
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Set up Google Cloud credentials
+        run: |
+          echo "${{ secrets.GCP_CREDENTIALS_JSON }}" | base64 -d > /tmp/gcp_credentials.json
+          echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp_credentials.json" >> $GITHUB_ENV
+
+      - name: Collect analytics for ${{ matrix.account_id }}
+        env:
+          # アカウントごとのYouTube認証情報（全アカウント分をまとめてインジェクト）
+          YOUTUBE_REFRESH_TOKEN_ACCT01: ${{ secrets.YOUTUBE_REFRESH_TOKEN_ACCT01 }}
+          YOUTUBE_CLIENT_ID_ACCT01:     ${{ secrets.YOUTUBE_CLIENT_ID_ACCT01 }}
+          YOUTUBE_CLIENT_SECRET_ACCT01: ${{ secrets.YOUTUBE_CLIENT_SECRET_ACCT01 }}
+          YOUTUBE_REFRESH_TOKEN_ACCT02: ${{ secrets.YOUTUBE_REFRESH_TOKEN_ACCT02 }}
+          YOUTUBE_CLIENT_ID_ACCT02:     ${{ secrets.YOUTUBE_CLIENT_ID_ACCT02 }}
+          YOUTUBE_CLIENT_SECRET_ACCT02: ${{ secrets.YOUTUBE_CLIENT_SECRET_ACCT02 }}
+          YOUTUBE_REFRESH_TOKEN_ACCT03: ${{ secrets.YOUTUBE_REFRESH_TOKEN_ACCT03 }}
+          YOUTUBE_CLIENT_ID_ACCT03:     ${{ secrets.YOUTUBE_CLIENT_ID_ACCT03 }}
+          YOUTUBE_CLIENT_SECRET_ACCT03: ${{ secrets.YOUTUBE_CLIENT_SECRET_ACCT03 }}
+          YOUTUBE_REFRESH_TOKEN_ACCT04: ${{ secrets.YOUTUBE_REFRESH_TOKEN_ACCT04 }}
+          YOUTUBE_CLIENT_ID_ACCT04:     ${{ secrets.YOUTUBE_CLIENT_ID_ACCT04 }}
+          YOUTUBE_CLIENT_SECRET_ACCT04: ${{ secrets.YOUTUBE_CLIENT_SECRET_ACCT04 }}
+          YOUTUBE_REFRESH_TOKEN_ACCT05: ${{ secrets.YOUTUBE_REFRESH_TOKEN_ACCT05 }}
+          YOUTUBE_CLIENT_ID_ACCT05:     ${{ secrets.YOUTUBE_CLIENT_ID_ACCT05 }}
+          YOUTUBE_CLIENT_SECRET_ACCT05: ${{ secrets.YOUTUBE_CLIENT_SECRET_ACCT05 }}
+        run: |
+          DATE_ARG=""
+          if [ -n "${{ inputs.date }}" ]; then
+            DATE_ARG="--date ${{ inputs.date }}"
+          fi
+          python scripts/09_analytics_collector.py \
+            --account-id "${{ matrix.account_id }}" \
+            $DATE_ARG
+
+      - name: Build dashboard summary
+        run: python scripts/11_dashboard_builder.py
+
+      - name: Commit metrics to repository
+        run: |
+          git config user.name  "yt-automation-bot"
+          git config user.email "bot@noreply.github.com"
+          git remote set-url origin \
+            "https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}"
+          git add data/metrics/
+          git diff --staged --quiet || \
+            git commit -m "chore: update analytics $(date -u +%Y-%m-%d) [${{ matrix.account_id }}]"
+          git push
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/gcp_credentials.json
+
+  # ──────────────────────────────────────────────
+  # 収集完了後にダッシュボードをデプロイ
+  # ──────────────────────────────────────────────
+  deploy-dashboard:
+    needs: collect
+    if: always()   # collect が部分的に失敗してもデプロイは試みる
+    uses: ./.github/workflows/deploy_dashboard.yml
+    secrets: inherit

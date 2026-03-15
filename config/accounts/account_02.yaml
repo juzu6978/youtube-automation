@@ -1,0 +1,36 @@
+account:
+  id: "account_02"
+  display_name: "雑学・豆知識チャンネル"
+  description: "日常の雑学や豆知識を分かりやすく解説するチャンネル"
+  channel_id: "UCxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+credentials:
+  refresh_token_secret: "YOUTUBE_REFRESH_TOKEN_ACCT02"
+  client_id_secret:     "YOUTUBE_CLIENT_ID_ACCT02"
+  client_secret_secret: "YOUTUBE_CLIENT_SECRET_ACCT02"
+
+content:
+  genre: "knowledge"
+  secondary_genres: []
+  video_title_template: null
+  made_for_kids: false
+  default_language: "ja"
+
+tts:
+  voice_id: "ja-JP-Neural2-B"
+  provider: "google_tts"
+  speaking_rate: 1.0
+  pitch: 0.0
+
+schedule:
+  videos_per_week: 3
+  upload_days: [tuesday, thursday, saturday]
+  upload_hour_utc: 14
+  priority: "medium"
+
+performance:
+  score: 0.0
+  score_rank: null
+  last_scored_at: null
+  baseline_videos_per_week: 3
+  score_history: []

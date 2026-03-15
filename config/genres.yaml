@@ -1,0 +1,48 @@
+# ジャンル定義ファイル
+# 各アカウントの content.genre は、このファイルの id と一致させること
+
+genres:
+  - id: technology
+    name_jp: "テクノロジー解説"
+    keywords: ["AI", "人工知能", "テック", "プログラミング", "ガジェット", "スマホ", "最新技術"]
+    prompt_context: "テクノロジーや最新技術に興味を持つ20〜40代の日本人視聴者向けに、わかりやすく解説してください。専門用語は噛み砕いて説明し、実生活への影響も触れてください。"
+    tts_voice: "ja-JP-Neural2-C"
+    duration_sec: 300
+    tags: ["テクノロジー", "AI", "最新技術", "ガジェット", "解説"]
+    category_id: 28  # Science & Technology
+
+  - id: knowledge
+    name_jp: "雑学・豆知識"
+    keywords: ["雑学", "豆知識", "驚き", "不思議", "意外", "知らなかった", "面白い事実"]
+    prompt_context: "幅広い年齢層の日本人視聴者が楽しめる、驚きや発見のある雑学・豆知識を紹介してください。「えっ、そうだったの！」という驚きを大切にしてください。"
+    tts_voice: "ja-JP-Neural2-B"
+    duration_sec: 240
+    tags: ["雑学", "豆知識", "へえ", "面白い", "不思議"]
+    category_id: 27  # Education
+
+  - id: lifestyle
+    name_jp: "ライフハック・生活術"
+    keywords: ["節約", "時短", "効率化", "生活術", "ライフハック", "便利", "日常"]
+    prompt_context: "忙しい日本人の日常をより豊かにするライフハックや生活術を紹介してください。すぐに実践できる具体的なヒントを中心に構成してください。"
+    tts_voice: "ja-JP-Neural2-A"
+    duration_sec: 240
+    tags: ["ライフハック", "生活術", "時短", "節約", "便利技"]
+    category_id: 26  # Howto & Style
+
+  - id: history
+    name_jp: "歴史・偉人解説"
+    keywords: ["歴史", "偉人", "日本史", "世界史", "戦国", "幕末", "古代"]
+    prompt_context: "日本史・世界史の知られざる側面や、偉人たちの知られていないエピソードを魅力的に紹介してください。学校では教わらない視点を大切にしてください。"
+    tts_voice: "ja-JP-Neural2-C"
+    duration_sec: 360
+    tags: ["歴史", "日本史", "世界史", "偉人", "解説"]
+    category_id: 27  # Education
+
+  - id: money
+    name_jp: "お金・投資入門"
+    keywords: ["お金", "節約", "投資", "資産形成", "NISA", "副業", "家計"]
+    prompt_context: "投資・お金の知識がない日本人にもわかりやすく、資産形成や家計管理のヒントを解説してください。リスクについても正直に触れ、初心者が安心して学べる内容にしてください。"
+    tts_voice: "ja-JP-Neural2-D"
+    duration_sec: 300
+    tags: ["お金", "投資", "節約", "資産形成", "NISA"]
+    category_id: 22  # People & Blogs

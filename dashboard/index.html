@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Automation Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <!-- ヘッダー -->
+    <header class="header">
+      <h1>YouTube Automation Dashboard</h1>
+      <p class="subtitle">
+        最終更新: <span id="last-updated">読み込み中...</span>
+      </p>
+    </header>
+
+    <!-- ローディング / エラー表示 -->
+    <div id="loading" class="message">データを読み込んでいます...</div>
+    <div id="error" class="message error" style="display:none;">データの読み込みに失敗しました。</div>
+
+    <!-- メインコンテンツ -->
+    <main id="main-content" style="display:none;">
+
+      <!-- アカウントカード群 -->
+      <section class="section">
+        <h2 class="section-title">アカウント パフォーマンスランキング</h2>
+        <div id="account-cards" class="cards-grid"></div>
+      </section>
+
+      <!-- 比較チャート -->
+      <section class="section charts-row">
+        <div class="chart-card">
+          <h3>過去7日間 視聴数比較</h3>
+          <canvas id="chart-views"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>過去7日間 登録者増減比較</h3>
+          <canvas id="chart-subs"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>CTR 比較（%）</h3>
+          <canvas id="chart-ctr"></canvas>
+        </div>
+      </section>
+
+      <!-- 30日トレンド -->
+      <section class="section">
+        <h2 class="section-title">30日間 視聴数トレンド</h2>
+        <div class="chart-card wide">
+          <canvas id="chart-trend"></canvas>
+        </div>
+      </section>
+
+      <!-- 詳細テーブル -->
+      <section class="section">
+        <h2 class="section-title">メトリクス詳細（過去7日）</h2>
+        <div class="table-wrapper">
+          <table id="metrics-table">
+            <thead>
+              <tr>
+                <th>順位</th>
+                <th>アカウント</th>
+                <th>ジャンル</th>
+                <th>スコア</th>
+                <th>視聴数</th>
+                <th>視聴時間(h)</th>
+                <th>登録者増減</th>
+                <th>CTR</th>
+                <th>平均視聴率</th>
+                <th>投稿頻度</th>
+                <th>Priority</th>
+              </tr>
+            </thead>
+            <tbody id="metrics-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+# アカウント01設定テンプレート
+# ★ channel_id を実際のYouTubeチャンネルIDに変更してください
+
+account:
+  id: "account_01"
+  display_name: "テクノロジー解説チャンネル"
+  description: "AIや最新テクノロジーをわかりやすく解説"
+  channel_id: "UCzffFFavwBeD8-hPmYd-1rw"
+
+credentials:
+  # 値はGitHub Secretsに保存。ここには Secret名のみ記載。
+  refresh_token_secret: "YOUTUBE_REFRESH_TOKEN_ACCT01"
+  client_id_secret:     "YOUTUBE_CLIENT_ID_ACCT01"
+  client_secret_secret: "YOUTUBE_CLIENT_SECRET_ACCT01"
+
+content:
+  genre: "technology"           # config/genres.yaml の id と一致させること
+  secondary_genres:             # Pexels検索が空振りした場合のフォールバックジャンル
+    - "knowledge"
+  video_title_template: null    # null = Claude が生成したタイトルをそのまま使用
+  made_for_kids: false
+  default_language: "ja"
+
+tts:
+  voice_id: "ja-JP-Neural2-C"   # 落ち着いた男性声
+  provider: "google_tts"
+  speaking_rate: 0.95
+  pitch: 0.0
+
+schedule:
+  # ⚠️ この値は09_performance_scorer.py が毎週自動更新します。手動編集不要。
+  videos_per_week: 3
+  upload_days: ["monday", "wednesday", "friday"]
+  upload_hour_utc: 14           # 14:00 UTC = 23:00 JST
+  priority: "medium"            # high / medium / low （スコアラーが設定）
+
+performance:
+  # ⚠️ この値は09_performance_scorer.py が毎週自動更新します。手動編集不要。
+  score: 0.0
+  score_rank: null
+  last_scored_at: null
+  baseline_videos_per_week: 3   # 初期設定値（スコアラーがリセットに使用）
+  score_history: []             # 直近4週のスコア履歴 [{date, score}, ...]

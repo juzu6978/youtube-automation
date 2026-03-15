@@ -1,0 +1,44 @@
+# GitHub Pages ダッシュボードデプロイワークフロー
+# collect_analytics.yml から呼び出されるほか、手動実行も可能。
+
+name: Deploy Dashboard to GitHub Pages
+
+on:
+  workflow_call:   # collect_analytics.yml から呼び出し
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy latest summary.json to dashboard
+        run: |
+          cp data/metrics/summary.json dashboard/summary.json 2>/dev/null || \
+            echo '{"generated_at":"N/A","accounts":[]}' > dashboard/summary.json
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "dashboard/"
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

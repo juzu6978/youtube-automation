@@ -1,0 +1,24 @@
+# アカウントレジストリ
+# 有効なアカウントIDをここに列挙する。
+# enabled: false にすると Analytics収集・投稿対象から除外される。
+
+accounts:
+  - id: "account_01"
+    enabled: true
+    config_path: "config/accounts/account_01.yaml"
+
+  - id: "account_02"
+    enabled: false    # セットアップ完了後に true に変更
+    config_path: "config/accounts/account_02.yaml"
+
+  - id: "account_03"
+    enabled: false
+    config_path: "config/accounts/account_03.yaml"
+
+  - id: "account_04"
+    enabled: false
+    config_path: "config/accounts/account_04.yaml"
+
+  - id: "account_05"
+    enabled: false
+    config_path: "config/accounts/account_05.yaml"

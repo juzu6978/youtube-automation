@@ -1,0 +1,36 @@
+account:
+  id: "account_04"
+  display_name: "歴史・偉人解説チャンネル"
+  description: "歴史上の出来事や偉人の生涯を分かりやすく解説するチャンネル"
+  channel_id: "UCxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+credentials:
+  refresh_token_secret: "YOUTUBE_REFRESH_TOKEN_ACCT04"
+  client_id_secret:     "YOUTUBE_CLIENT_ID_ACCT04"
+  client_secret_secret: "YOUTUBE_CLIENT_SECRET_ACCT04"
+
+content:
+  genre: "history"
+  secondary_genres: []
+  video_title_template: null
+  made_for_kids: false
+  default_language: "ja"
+
+tts:
+  voice_id: "ja-JP-Neural2-C"
+  provider: "google_tts"
+  speaking_rate: 0.9
+  pitch: 0.0
+
+schedule:
+  videos_per_week: 2
+  upload_days: [wednesday, sunday]
+  upload_hour_utc: 14
+  priority: "medium"
+
+performance:
+  score: 0.0
+  score_rank: null
+  last_scored_at: null
+  baseline_videos_per_week: 2
+  score_history: []

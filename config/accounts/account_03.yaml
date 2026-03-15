@@ -1,0 +1,36 @@
+account:
+  id: "account_03"
+  display_name: "ライフハックチャンネル"
+  description: "日常生活をより便利にするライフハックを紹介するチャンネル"
+  channel_id: "UCxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+credentials:
+  refresh_token_secret: "YOUTUBE_REFRESH_TOKEN_ACCT03"
+  client_id_secret:     "YOUTUBE_CLIENT_ID_ACCT03"
+  client_secret_secret: "YOUTUBE_CLIENT_SECRET_ACCT03"
+
+content:
+  genre: "lifestyle"
+  secondary_genres: []
+  video_title_template: null
+  made_for_kids: false
+  default_language: "ja"
+
+tts:
+  voice_id: "ja-JP-Neural2-A"
+  provider: "google_tts"
+  speaking_rate: 1.0
+  pitch: 0.0
+
+schedule:
+  videos_per_week: 2
+  upload_days: [monday, thursday]
+  upload_hour_utc: 14
+  priority: "medium"
+
+performance:
+  score: 0.0
+  score_rank: null
+  last_scored_at: null
+  baseline_videos_per_week: 2
+  score_history: []
