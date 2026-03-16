@@ -7,7 +7,7 @@ genres:
     keywords: ["AI", "人工知能", "テック", "プログラミング", "ガジェット", "スマホ", "最新技術"]
     prompt_context: "テクノロジーや最新技術に興味を持つ20〜40代の日本人視聴者向けに、わかりやすく解説してください。専門用語は噛み砕いて説明し、実生活への影響も触れてください。"
     tts_voice: "ja-JP-Neural2-C"
-    duration_sec: 300
+    duration_sec: 480             # 300→480（8分動画）
     tags: ["テクノロジー", "AI", "最新技術", "ガジェット", "解説"]
     category_id: 28  # Science & Technology
 

@@ -42,58 +42,97 @@ def extract_frame(video_path: Path, output_path: Path, time_pct: float = 0.10):
     subprocess.run(extract_cmd, check=True, capture_output=True)
 
 
-def overlay_title(frame_path: Path, title: str, output_path: Path, settings: dict):
-    """ImageMagick を使ってタイトルテキストをフレームにオーバーレイする"""
-    thumb_cfg = settings["thumbnail"]
-    font_size = thumb_cfg["font_size"]
-    text_color = thumb_cfg["text_color"]
-    shadow_color = thumb_cfg["shadow_color"]
+def split_title_lines(text: str) -> list:
+    """タイトルを最大16文字×2行に分割する"""
+    if len(text) <= 16:
+        return [text]
+    # 自然な区切り点（句読点・記号）を探す
+    split_pos = 16
+    for i in range(15, max(8, 15 - 5), -1):
+        if i < len(text) and text[i] in "、。！？！？・ ":
+            split_pos = i + 1
+            break
+    line1 = text[:split_pos]
+    remaining = text[split_pos:]
+    line2 = remaining[:16] + ("…" if len(remaining) > 16 else "")
+    return [line1, line2] if line2 else [line1]
 
-    # タイトルを短縮（サムネイルは20文字程度が見やすい）
-    display_title = title if len(title) <= 20 else title[:19] + "…"
+
+def overlay_title(frame_path: Path, title: str, output_path: Path, settings: dict):
+    """YouTube向け 2行タイトル＋カラーバナー サムネイルを生成する"""
+    thumb_cfg = settings["thumbnail"]
+    font_size = thumb_cfg.get("font_size", 56)
 
     font_path = Path("assets/fonts/NotoSansCJK-Regular.ttc")
     if not font_path.exists():
         font_path = Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc")
 
     if not font_path.exists():
-        # フォントなし: フレームをそのままサムネイルとして使用
         print("[06] 警告: フォントが見つかりません。テキストなしサムネイルを生成します。")
         import shutil
         shutil.copy(frame_path, output_path)
         return
 
-    # 半透明オーバーレイ + テキスト
+    lines = split_title_lines(title)
+    has_two_lines = len(lines) == 2
+
+    # gravity=South からの縦オフセット（px）
+    if has_two_lines:
+        offset1 = "+0+105"   # 1行目（大・上）
+        offset2 = "+0+38"    # 2行目（小・下）
+    else:
+        offset1 = "+0+60"    # 1行のみ（中央下部）
+
     convert_cmd = [
         "convert",
         str(frame_path),
-        # 下部に暗いグラデーション
+        # 全体を少し暗くして視認性を上げる
+        "-brightness-contrast", "-12x0",
+        # 下部グラデーション（暗め・幅広）
         "(",
-        "-size", "1280x200",
-        "gradient:rgba(0,0,0,0.8)-transparent",
-        "-flip",
+        "-size", "1280x340",
+        "gradient:rgba(0,0,0,0.0)-rgba(0,0,0,0.92)",
         ")",
         "-gravity", "South",
         "-composite",
-        # タイトルテキスト（影付き）
+        # テキスト背景の矩形（深い紺色・半透明）
+        "-fill", "rgba(8,18,75,0.82)",
+        "-draw", "roundrectangle 22,545 1258,710 16,16",
+        # ゴールドのアクセントライン（矩形上端）
+        "-fill", "rgba(255,185,0,1.0)",
+        "-draw", "rectangle 22,545 1258,556",
+        # 1行目テキスト（ゴールド・大）
         "-font", str(font_path),
         "-pointsize", str(font_size),
-        "-fill", shadow_color,
-        "-annotate", "+4+4",
-        display_title,
-        "-fill", text_color,
-        "-annotate", "+0+0",
-        display_title,
+        "-fill", "#FFD700",
+        "-stroke", "#000000",
+        "-strokewidth", "3",
         "-gravity", "South",
-        "-geometry", "+0+40",
-        str(output_path),
+        "-annotate", offset1,
+        lines[0],
     ]
+
+    # 2行目テキスト（白・小）
+    if has_two_lines:
+        second_size = int(font_size * 0.74)
+        convert_cmd += [
+            "-pointsize", str(second_size),
+            "-fill", "#FFFFFF",
+            "-stroke", "#000000",
+            "-strokewidth", "2",
+            "-gravity", "South",
+            "-annotate", offset2,
+            lines[1],
+        ]
+
+    convert_cmd.append(str(output_path))
 
     try:
         subprocess.run(convert_cmd, check=True, capture_output=True)
-    except subprocess.CalledProcessError:
-        # ImageMagick が利用できない場合はフレームをそのまま使用
-        print("[06] 警告: ImageMagick エラー。テキストなしサムネイルを使用します。")
+        label = lines[0] + (" / " + lines[1] if has_two_lines else "")
+        print(f"[06] サムネイル生成: {label}")
+    except subprocess.CalledProcessError as e:
+        print("[06] 警告: ImageMagick エラー。シンプルサムネイルを使用します。")
         import shutil
         shutil.copy(frame_path, output_path)
 
