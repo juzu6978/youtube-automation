@@ -19,8 +19,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from scripts.utils import load_account_config, load_accounts_registry
-from scripts.08_config_loader import resolve_credentials
+from scripts.utils import load_account_config, load_accounts_registry, resolve_credentials
 
 
 ANALYTICS_METRICS = ",".join([

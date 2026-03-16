@@ -3,6 +3,8 @@ utils.py
 パイプライン全体で共通して使うユーティリティ関数群。
 """
 
+import os
+
 import yaml
 from pathlib import Path
 
@@ -48,3 +50,27 @@ def load_accounts_registry() -> list[dict]:
     with open("config/accounts/accounts_registry.yaml", encoding="utf-8") as f:
         reg = yaml.safe_load(f)
     return [a for a in reg["accounts"] if a.get("enabled", False)]
+
+
+def resolve_credentials(account_cfg: dict) -> dict:
+    """
+    account.yaml の credentials ブロックに記載されたシークレット名を
+    実際の環境変数値に解決して返す。
+
+    例: refresh_token_secret → YOUTUBE_REFRESH_TOKEN → 実際のトークン値
+    キー名のサフィックス "_secret" を除去してシンプルなキーにマッピングする。
+    """
+    creds_cfg = account_cfg["credentials"]
+    result = {}
+    for key, secret_name in creds_cfg.items():
+        value = os.environ.get(secret_name)
+        if not value:
+            raise EnvironmentError(
+                f"必須シークレット '{secret_name}' が環境変数に設定されていません。"
+                f"GitHub Secrets に追加し、workflow の env: ブロックで渡してください。"
+            )
+        # "_secret" サフィックスを除去（removesuffix で末尾のみ除去）
+        # 例: "client_secret_secret" → "client_secret"（replaceだと誤動作する）
+        simple_key = key.removesuffix("_secret")
+        result[simple_key] = value
+    return result
