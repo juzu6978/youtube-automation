@@ -9,9 +9,10 @@ account:
 
 credentials:
   # 値はGitHub Secretsに保存。ここには Secret名のみ記載。
-  refresh_token_secret: "YOUTUBE_REFRESH_TOKEN_ACCT01"
-  client_id_secret:     "YOUTUBE_CLIENT_ID_ACCT01"
-  client_secret_secret: "YOUTUBE_CLIENT_SECRET_ACCT01"
+  # upload_account.yml がアカウント固有のSecretをこのジェネリック名にリネームして渡す
+  refresh_token_secret: "YOUTUBE_REFRESH_TOKEN"
+  client_id_secret:     "YOUTUBE_CLIENT_ID"
+  client_secret_secret: "YOUTUBE_CLIENT_SECRET"
 
 content:
   genre: "technology"           # config/genres.yaml の id と一致させること
