@@ -32,7 +32,7 @@ def resolve_credentials(account_cfg: dict) -> dict:
                 f"GitHub Secrets に追加し、workflow の env: ブロックで渡してください。"
             )
         # キー名からサフィックスを除去してシンプルなキーに
-        simple_key = key.replace("_secret", "")
+        simple_key = key.removesuffix("_secret")
         result[simple_key] = value
     return result
 

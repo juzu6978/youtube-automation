@@ -32,7 +32,7 @@ def resolve_credentials(account_cfg: dict) -> dict:
         value = os.environ.get(secret_name)
         if not value:
             raise EnvironmentError(f"必須シークレット '{secret_name}' が未設定です。")
-        result[key.replace("_secret", "")] = value
+        result[key.removesuffix("_secret")] = value
     return result
 
 
