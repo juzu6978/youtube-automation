@@ -9,6 +9,7 @@ Pexels / Pixabay API から動画素材を検索・ダウンロードする。
 import argparse
 import json
 import os
+import random
 import sys
 import time
 from pathlib import Path
@@ -33,6 +34,7 @@ def search_pexels(query: str, per_page: int = 5, min_width: int = 1920) -> list[
     params = {
         "query": query,
         "per_page": per_page,
+        "page": random.randint(1, 3),
         "orientation": "landscape",
         "locale": "ja-JP",
     }
@@ -74,6 +76,7 @@ def search_pixabay(query: str, per_page: int = 5) -> list[dict]:
         "q": query,
         "video_type": "film",
         "per_page": per_page,
+        "page": random.randint(1, 3),
         "min_width": 1280,
         "lang": "en",
     }
