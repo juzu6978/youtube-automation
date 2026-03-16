@@ -29,6 +29,8 @@ PIPELINE_STEPS = [
     ("06_thumbnail_creator",  "サムネイル生成"),
 ]
 
+SAMPLE_DIR = Path(__file__).parent.parent / "assets" / "sample"
+
 
 def run_step(script_name: str, label: str, account_id: str, run_id: str, extra_args: list = None):
     script_path = Path(f"scripts/{script_name}.py")
@@ -62,21 +64,41 @@ def run_upload(account_id: str, run_id: str, dry_run: bool):
         raise RuntimeError(f"YouTube投稿に失敗しました（終了コード: {result.returncode}）")
 
 
-def run_pipeline(account_id: str, run_id: str, dry_run: bool = False):
+def copy_sample_data(run_dir: Path):
+    """assets/sample/ のJSONをrun_dirにコピーしてステップ01・02をスキップできるようにする。"""
+    for fname in ("concept.json", "script.json"):
+        src = SAMPLE_DIR / fname
+        dst = run_dir / fname
+        if not src.exists():
+            raise FileNotFoundError(f"サンプルファイルが見つかりません: {src}")
+        shutil.copy2(src, dst)
+        print(f"[SAMPLE] {fname} をコピーしました: {dst}")
+
+
+def run_pipeline(account_id: str, run_id: str, dry_run: bool = False, use_sample: bool = False):
     settings = load_settings()
     run_dir = get_run_dir(account_id, run_id, settings)
     run_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"\n{'='*60}")
     print(f"  YouTube Automation Pipeline")
-    print(f"  Account : {account_id}")
-    print(f"  Run ID  : {run_id}")
-    print(f"  Dry Run : {dry_run}")
-    print(f"  Work Dir: {run_dir}")
+    print(f"  Account    : {account_id}")
+    print(f"  Run ID     : {run_id}")
+    print(f"  Dry Run    : {dry_run}")
+    print(f"  Use Sample : {use_sample}")
+    print(f"  Work Dir   : {run_dir}")
     print(f"{'='*60}")
+
+    # --use-sample の場合、事前生成済みのJSONをコピーしてAPI呼び出しをスキップ
+    if use_sample:
+        copy_sample_data(run_dir)
 
     try:
         for script_name, label in PIPELINE_STEPS:
+            # --use-sample の場合、ステップ01・02はスキップ
+            if use_sample and script_name in ("01_concept_generator", "02_script_writer"):
+                print(f"\n[SKIP] {label}（--use-sample モード）")
+                continue
             run_step(script_name, label, account_id, run_id)
 
         run_upload(account_id, run_id, dry_run)
@@ -114,10 +136,12 @@ def main():
     parser.add_argument("--account-id", required=True, help="config/accounts/ 内のアカウントID")
     parser.add_argument("--run-id", default=None, help="実行ID（省略時は自動生成）")
     parser.add_argument("--dry-run", action="store_true", help="YouTube投稿をスキップ")
+    parser.add_argument("--use-sample", action="store_true",
+                        help="assets/sample/ の事前生成JSONを使用（Anthropic API不要）")
     args = parser.parse_args()
 
     run_id = args.run_id or datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_pipeline(args.account_id, run_id, dry_run=args.dry_run)
+    run_pipeline(args.account_id, run_id, dry_run=args.dry_run, use_sample=args.use_sample)
 
 
 if __name__ == "__main__":

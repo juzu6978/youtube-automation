@@ -14,6 +14,10 @@ on:
         description: "Dry run（投稿スキップ）"
         type: boolean
         default: false
+      use_sample:
+        description: "サンプルデータ使用（Anthropic API不要・無料テスト用）"
+        type: boolean
+        default: false
 
 jobs:
   upload:
@@ -21,6 +25,7 @@ jobs:
     with:
       account_id: "account_01"
       dry_run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+      use_sample: ${{ github.event_name == 'workflow_dispatch' && inputs.use_sample || false }}
     secrets:
       YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN_ACCT01 }}
       YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID_ACCT01 }}

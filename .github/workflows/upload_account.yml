@@ -21,6 +21,11 @@ on:
         type: boolean
         default: false
         description: "trueにすると投稿せずテストのみ"
+      use_sample:
+        required: false
+        type: boolean
+        default: false
+        description: "trueにするとAssets/sample/のJSONを使用（Anthropic API不要）"
     secrets:
       YOUTUBE_REFRESH_TOKEN:
         required: true
@@ -100,7 +105,10 @@ jobs:
         run: |
           EXTRA_ARGS=""
           if [ "${{ inputs.dry_run }}" = "true" ]; then
-            EXTRA_ARGS="--dry-run"
+            EXTRA_ARGS="$EXTRA_ARGS --dry-run"
+          fi
+          if [ "${{ inputs.use_sample }}" = "true" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --use-sample"
           fi
           python scripts/main.py \
             --account-id "${{ inputs.account_id }}" \
