@@ -232,6 +232,8 @@ def main():
     parser = argparse.ArgumentParser(description="TikTok に動画を投稿する")
     parser.add_argument("--account-id", required=True)
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--format", default="tiktok",
+                        help="フォーマット: tiktok（このスクリプトは縦型専用）")
     parser.add_argument("--dry-run", action="store_true", help="実際に投稿せずテストする")
     args = parser.parse_args()
 

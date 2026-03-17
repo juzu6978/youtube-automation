@@ -146,6 +146,8 @@ def main():
     parser = argparse.ArgumentParser(description="TTS音声を生成しBGMとミックスする")
     parser.add_argument("--account-id", required=True)
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--format", default="landscape",
+                        help="フォーマット: landscape | shorts | tiktok（TTS処理自体は共通）")
     args = parser.parse_args()
 
     account_cfg = load_account_config(args.account_id)
