@@ -26,14 +26,57 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from scripts.utils import load_genre_config, load_settings, get_run_dir
 
 
-def generate_concept(genre_cfg: dict, run_dir: Path) -> dict:
+SHORT_FORMATS = ("shorts", "tiktok")
+
+
+def generate_concept(genre_cfg: dict, run_dir: Path, fmt: str = "landscape") -> dict:
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
     today = date.today().strftime("%Y年%m月%d日")
     keywords_str = "、".join(genre_cfg["keywords"])
     context = genre_cfg.get("prompt_context", "")
 
-    prompt = f"""あなたはYouTubeで100万再生を獲得した実績のあるコンテンツプランナーです。
+    if fmt in SHORT_FORMATS:
+        # ショート動画用プロンプト（55秒・3セクション）
+        prompt = f"""あなたはYouTubeショート・TikTokで1000万再生を獲得した実績のあるバイラルコンテンツプランナーです。
+今日の日付: {today}
+
+ジャンル: {genre_cfg['name_jp']}
+関連キーワード: {keywords_str}
+ターゲット視聴者: {context}
+
+【縦型ショート動画（55秒）で爆発的に再生される法則】
+✓ 最初3秒で全て決まる：「え、まじ？」「知らなかった...」と言わせる衝撃の一言
+✓ テンポが命：1センテンス2〜3秒、テンポよく畳み掛ける
+✓ 好奇心ギャップ：「〜って知ってた？」「実は〜なんです」
+✓ 25文字以内のタイトル：短く・インパクト重視
+
+良いショートタイトル例：
+- 「ChatGPTの使い方、99%が知らない」
+- 「スマホ充電、やってはいけない方法」
+- 「AIに月10万円稼がせる方法」
+
+【出力形式】必ず以下のJSONのみを返してください（マークダウン不要）:
+{{
+  "topic": "選択したトピック名（25文字以内・インパクト重視）",
+  "hook": "最初3秒の掴み文（視聴者が止まる衝撃の一言、30文字以内）",
+  "outline": [
+    {{"title": "フック・掴み（10秒）", "keywords": ["Pexels検索用英語キーワード1", "英語キーワード2"]}},
+    {{"title": "本編・核心（35秒）", "keywords": ["英語キーワード1", "英語キーワード2"]}},
+    {{"title": "CTA・締め（10秒）", "keywords": ["motivation", "success"]}}
+  ],
+  "search_keywords": ["英語キーワード1", "英語キーワード2", "英語キーワード3"]
+}}
+
+注意:
+- keywordsはPexels動画検索用なので必ず英語で
+- outlineは必ず3セクション（フック/本編/CTA）
+- topicは25文字以内の短くてインパクトのあるタイトル
+- hookは「え？」「まじ？」と思わせる最初の一言
+- search_keywordsは3個の英語キーワード"""
+    else:
+        # 通常の横型動画用プロンプト（5〜8分・7〜8セクション）
+        prompt = f"""あなたはYouTubeで100万再生を獲得した実績のあるコンテンツプランナーです。
 今日の日付: {today}
 
 ジャンル: {genre_cfg['name_jp']}
@@ -91,7 +134,7 @@ def generate_concept(genre_cfg: dict, run_dir: Path) -> dict:
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(concept, f, ensure_ascii=False, indent=2)
 
-    print(f"[01] トピック生成完了: {concept['topic']}")
+    print(f"[01] トピック生成完了: {concept['topic']} [{fmt}]")
     print(f"[01] 保存先: {output_path}")
     return concept
 
@@ -100,6 +143,8 @@ def main():
     parser = argparse.ArgumentParser(description="トピック・構成を生成する")
     parser.add_argument("--account-id", required=True)
     parser.add_argument("--run-id", required=True, help="実行ID（タイムスタンプ等）")
+    parser.add_argument("--format", default="landscape",
+                        help="フォーマット: landscape | shorts | tiktok")
     args = parser.parse_args()
 
     genre_cfg = load_genre_config(args.account_id)
@@ -107,7 +152,7 @@ def main():
     run_dir = get_run_dir(args.account_id, args.run_id, settings)
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    generate_concept(genre_cfg, run_dir)
+    generate_concept(genre_cfg, run_dir, fmt=args.format)
 
 
 if __name__ == "__main__":

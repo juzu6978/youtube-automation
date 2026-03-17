@@ -15,7 +15,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from scripts.utils import load_settings, get_run_dir
 
 
-def extract_frame(video_path: Path, output_path: Path, time_pct: float = 0.10):
+SHORT_FORMATS = ("shorts", "tiktok")
+
+
+def extract_frame(video_path: Path, output_path: Path, time_pct: float = 0.10,
+                  fmt: str = "landscape"):
     """動画の指定タイムコード（全体のtime_pct%地点）からフレームを抽出する"""
     # まず動画の長さを取得
     probe_cmd = [
@@ -30,12 +34,18 @@ def extract_frame(video_path: Path, output_path: Path, time_pct: float = 0.10):
 
     seek_time = duration * time_pct
 
+    # フォーマットに応じたクロップ・スケール
+    if fmt in SHORT_FORMATS:
+        vf = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920"
+    else:
+        vf = "scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720"
+
     extract_cmd = [
         "ffmpeg", "-y",
         "-ss", str(seek_time),
         "-i", str(video_path),
         "-vframes", "1",
-        "-vf", "scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720",
+        "-vf", vf,
         "-q:v", "2",
         str(output_path),
     ]
@@ -58,10 +68,16 @@ def split_title_lines(text: str) -> list:
     return [line1, line2] if line2 else [line1]
 
 
-def overlay_title(frame_path: Path, title: str, output_path: Path, settings: dict):
+def overlay_title(frame_path: Path, title: str, output_path: Path, settings: dict,
+                  fmt: str = "landscape"):
     """YouTube向け 2行タイトル＋カラーバナー サムネイルを生成する"""
-    thumb_cfg = settings["thumbnail"]
+    if fmt in SHORT_FORMATS:
+        thumb_cfg = settings["shorts"]["thumbnail"]
+    else:
+        thumb_cfg = settings["thumbnail"]
     font_size = thumb_cfg.get("font_size", 56)
+    thumb_w = thumb_cfg.get("width", 1280)
+    thumb_h = thumb_cfg.get("height", 720)
 
     font_path = Path("assets/fonts/NotoSansCJK-Regular.ttc")
     if not font_path.exists():
@@ -76,12 +92,29 @@ def overlay_title(frame_path: Path, title: str, output_path: Path, settings: dic
     lines = split_title_lines(title)
     has_two_lines = len(lines) == 2
 
-    # gravity=South からの縦オフセット（px）
-    if has_two_lines:
-        offset1 = "+0+105"   # 1行目（大・上）
-        offset2 = "+0+38"    # 2行目（小・下）
+    if fmt in SHORT_FORMATS:
+        # 縦型（1080x1920）: バナーを下部に配置
+        banner_top = thumb_h - 340          # 例: 1580
+        banner_bottom = thumb_h - 50        # 例: 1870
+        accent_bottom = banner_top + 11     # 例: 1591
+        grad_size = f"{thumb_w}x400"
+        rect_coords = f"22,{banner_top} {thumb_w - 22},{banner_bottom} 16,16"
+        accent_coords = f"22,{banner_top} {thumb_w - 22},{accent_bottom}"
+        if has_two_lines:
+            offset1 = "+0+140"
+            offset2 = "+0+65"
+        else:
+            offset1 = "+0+90"
     else:
-        offset1 = "+0+60"    # 1行のみ（中央下部）
+        # 横型（1280x720）
+        grad_size = "1280x340"
+        rect_coords = "22,545 1258,710 16,16"
+        accent_coords = "22,545 1258,556"
+        if has_two_lines:
+            offset1 = "+0+105"
+            offset2 = "+0+38"
+        else:
+            offset1 = "+0+60"
 
     convert_cmd = [
         "convert",
@@ -90,17 +123,17 @@ def overlay_title(frame_path: Path, title: str, output_path: Path, settings: dic
         "-brightness-contrast", "-12x0",
         # 下部グラデーション（暗め・幅広）
         "(",
-        "-size", "1280x340",
+        "-size", grad_size,
         "gradient:rgba(0,0,0,0.0)-rgba(0,0,0,0.92)",
         ")",
         "-gravity", "South",
         "-composite",
         # テキスト背景の矩形（深い紺色・半透明）
         "-fill", "rgba(8,18,75,0.82)",
-        "-draw", "roundrectangle 22,545 1258,710 16,16",
+        "-draw", f"roundrectangle {rect_coords}",
         # ゴールドのアクセントライン（矩形上端）
         "-fill", "rgba(255,185,0,1.0)",
-        "-draw", "rectangle 22,545 1258,556",
+        "-draw", f"rectangle {accent_coords}",
         # 1行目テキスト（ゴールド・大）
         "-font", str(font_path),
         "-pointsize", str(font_size),
@@ -137,7 +170,7 @@ def overlay_title(frame_path: Path, title: str, output_path: Path, settings: dic
         shutil.copy(frame_path, output_path)
 
 
-def create_thumbnail(run_dir: Path, settings: dict) -> Path:
+def create_thumbnail(run_dir: Path, settings: dict, fmt: str = "landscape") -> Path:
     video_path = run_dir / "output.mp4"
     script_path = run_dir / "script.json"
 
@@ -145,16 +178,20 @@ def create_thumbnail(run_dir: Path, settings: dict) -> Path:
         script = json.load(f)
 
     title = script["title"]
-    time_pct = settings["thumbnail"]["extract_time_pct"]
+
+    if fmt in SHORT_FORMATS:
+        time_pct = settings["shorts"]["thumbnail"]["extract_time_pct"]
+    else:
+        time_pct = settings["thumbnail"]["extract_time_pct"]
 
     frame_path = run_dir / "_frame_raw.jpg"
     thumbnail_path = run_dir / "thumbnail.jpg"
 
-    print(f"[06] フレーム抽出中 ({time_pct*100:.0f}%地点)...")
-    extract_frame(video_path, frame_path, time_pct)
+    print(f"[06] フレーム抽出中 ({time_pct*100:.0f}%地点) [{fmt}]...")
+    extract_frame(video_path, frame_path, time_pct, fmt=fmt)
 
     print(f"[06] タイトルオーバーレイ中: {title[:20]}...")
-    overlay_title(frame_path, title, thumbnail_path, settings)
+    overlay_title(frame_path, title, thumbnail_path, settings, fmt=fmt)
 
     frame_path.unlink(missing_ok=True)
 
@@ -167,11 +204,13 @@ def main():
     parser = argparse.ArgumentParser(description="サムネイルを生成する")
     parser.add_argument("--account-id", required=True)
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--format", default="landscape",
+                        help="フォーマット: landscape | shorts | tiktok")
     args = parser.parse_args()
 
     settings = load_settings()
     run_dir = get_run_dir(args.account_id, args.run_id, settings)
-    create_thumbnail(run_dir, settings)
+    create_thumbnail(run_dir, settings, fmt=args.format)
 
 
 if __name__ == "__main__":

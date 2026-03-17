@@ -89,7 +89,10 @@ def build_concat_list(clips: list[dict], narration_duration_ms: int,
     return concat_path
 
 
-def assemble_video(run_dir: Path, settings: dict) -> Path:
+SHORT_FORMATS = ("shorts", "tiktok")
+
+
+def assemble_video(run_dir: Path, settings: dict, fmt: str = "landscape") -> Path:
     narration_path = run_dir / "narration.mp3"
     clips_meta_path = run_dir / "clips.json"
     timings_path = run_dir / "timings.json"
@@ -115,8 +118,20 @@ def assemble_video(run_dir: Path, settings: dict) -> Path:
         # CI環境では日本語フォントをシステムから探す
         font_path = Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc")
 
-    sub_cfg = settings["subtitle"]
-    video_cfg = settings["video"]
+    # フォーマットに応じた設定を選択
+    if fmt in SHORT_FORMATS:
+        video_cfg = settings["shorts"]
+        sub_cfg = settings["shorts"]["subtitle"]
+        # 縦型(9:16): 横動画を中央クロップして縦にする
+        scale_filter = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920"
+        resolution_label = "1080x1920 (縦型)"
+    else:
+        video_cfg = settings["video"]
+        sub_cfg = settings["subtitle"]
+        scale_filter = f"scale={video_cfg['resolution'].replace('x', ':')}"
+        resolution_label = video_cfg["resolution"]
+
+    print(f"[05] 解像度: {resolution_label}")
 
     # Step 1: クリップを連結してベース動画を生成
     base_video = run_dir / "base_video.mp4"
@@ -125,7 +140,7 @@ def assemble_video(run_dir: Path, settings: dict) -> Path:
         "-f", "concat", "-safe", "0",
         "-i", str(concat_path),
         "-t", str(narration_ms / 1000),
-        "-vf", f"scale={video_cfg['resolution'].replace('x', ':')}",
+        "-vf", scale_filter,
         "-r", str(video_cfg["fps"]),
         "-c:v", video_cfg["codec"],
         "-preset", video_cfg["preset"],
@@ -144,11 +159,11 @@ def assemble_video(run_dir: Path, settings: dict) -> Path:
             f"subtitles={srt_path}:"
             f"fontsdir={font_path.parent}:"
             f"force_style='"
-            f"Fontname={sub_cfg['font_name']},"
+            f"Fontname={settings['subtitle']['font_name']},"
             f"FontSize={sub_cfg['font_size']},"
-            f"PrimaryColour={sub_cfg['primary_color']},"
-            f"OutlineColour={sub_cfg['outline_color']},"
-            f"BorderStyle={sub_cfg['border_style']},"
+            f"PrimaryColour={settings['subtitle']['primary_color']},"
+            f"OutlineColour={settings['subtitle']['outline_color']},"
+            f"BorderStyle={settings['subtitle']['border_style']},"
             f"MarginV={sub_cfg['margin_v']}'"
         )
     else:
@@ -187,11 +202,13 @@ def main():
     parser = argparse.ArgumentParser(description="動画・音声・字幕を合成する")
     parser.add_argument("--account-id", required=True)
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--format", default="landscape",
+                        help="フォーマット: landscape | shorts | tiktok")
     args = parser.parse_args()
 
     settings = load_settings()
     run_dir = get_run_dir(args.account_id, args.run_id, settings)
-    assemble_video(run_dir, settings)
+    assemble_video(run_dir, settings, fmt=args.format)
 
 
 if __name__ == "__main__":

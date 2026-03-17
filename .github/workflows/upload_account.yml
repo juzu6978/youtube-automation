@@ -41,6 +41,12 @@ on:
         required: false
       PIXABAY_API_KEY:
         required: false
+      TIKTOK_ACCESS_TOKEN:
+        required: false
+      TIKTOK_CLIENT_KEY:
+        required: false
+      TIKTOK_CLIENT_SECRET:
+        required: false
 
 jobs:
   produce-and-upload:
@@ -102,6 +108,9 @@ jobs:
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          TIKTOK_ACCESS_TOKEN: ${{ secrets.TIKTOK_ACCESS_TOKEN }}
+          TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
         run: |
           EXTRA_ARGS=""
           if [ "${{ inputs.dry_run }}" = "true" ]; then
@@ -118,11 +127,21 @@ jobs:
       - name: Show upload result
         if: always()
         run: |
-          RESULT_FILE="/tmp/yt_automation/${{ inputs.account_id }}/${{ steps.run_id.outputs.run_id }}/upload_result.json"
-          if [ -f "$RESULT_FILE" ]; then
-            echo "=== Upload Result ==="
-            cat "$RESULT_FILE"
-          fi
+          BASE_DIR="/tmp/yt_automation/${{ inputs.account_id }}"
+          RUN_ID="${{ steps.run_id.outputs.run_id }}"
+          # landscape / shorts / tiktok の各フォーマット結果を表示
+          for fmt in landscape shorts tiktok; do
+            YT_RESULT="$BASE_DIR/${RUN_ID}_${fmt}/upload_result.json"
+            TT_RESULT="$BASE_DIR/${RUN_ID}_${fmt}/tiktok_result.json"
+            if [ -f "$YT_RESULT" ]; then
+              echo "=== YouTube Upload Result (${fmt}) ==="
+              cat "$YT_RESULT"
+            fi
+            if [ -f "$TT_RESULT" ]; then
+              echo "=== TikTok Upload Result (${fmt}) ==="
+              cat "$TT_RESULT"
+            fi
+          done
 
       - name: Cleanup temp files
         if: always()

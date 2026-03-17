@@ -38,6 +38,8 @@ def resolve_credentials(account_cfg: dict) -> dict:
 
 YOUTUBE_SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
 
+SHORT_FORMATS = ("shorts", "tiktok")
+
 
 def build_youtube_client(credentials: dict):
     creds = Credentials(
@@ -52,13 +54,23 @@ def build_youtube_client(credentials: dict):
 
 
 def upload_video(youtube, video_path: Path, script: dict,
-                 account_cfg: dict, genre_cfg: dict, dry_run: bool = False) -> str | None:
+                 account_cfg: dict, genre_cfg: dict, fmt: str = "landscape",
+                 dry_run: bool = False) -> str | None:
     content_cfg = account_cfg["content"]
+
+    # Shorts の場合はタイトル末尾に #Shorts を付加し、説明文先頭にも追記
+    title = script["title"]
+    description = script["description"]
+    if fmt in SHORT_FORMATS:
+        if not title.endswith("#Shorts"):
+            title = title + " #Shorts"
+        if not description.startswith("#Shorts"):
+            description = "#Shorts\n\n" + description
 
     body = {
         "snippet": {
-            "title": script["title"],
-            "description": script["description"],
+            "title": title,
+            "description": description,
             "tags": script.get("tags", []) + genre_cfg.get("tags", []),
             "categoryId": str(content_cfg.get("category_id", genre_cfg.get("category_id", 22))),
             "defaultLanguage": content_cfg.get("default_language", "ja"),
@@ -70,7 +82,7 @@ def upload_video(youtube, video_path: Path, script: dict,
     }
 
     if dry_run:
-        print(f"[07] DRY RUN: 投稿をスキップします")
+        print(f"[07] DRY RUN: 投稿をスキップします [{fmt}]")
         print(f"[07]   タイトル: {body['snippet']['title']}")
         print(f"[07]   タグ: {body['snippet']['tags'][:5]}...")
         return "DRY_RUN_VIDEO_ID"
@@ -120,7 +132,8 @@ def upload_thumbnail(youtube, video_id: str, thumbnail_path: Path, dry_run: bool
     print(f"[07] サムネイルアップロード完了")
 
 
-def upload_pipeline(account_id: str, run_id: str, settings: dict, dry_run: bool = False):
+def upload_pipeline(account_id: str, run_id: str, settings: dict,
+                    fmt: str = "landscape", dry_run: bool = False):
     account_cfg = load_account_config(account_id)
     genre_cfg = load_genre_config(account_id)
     run_dir = get_run_dir(account_id, run_id, settings)
@@ -135,7 +148,8 @@ def upload_pipeline(account_id: str, run_id: str, settings: dict, dry_run: bool 
     credentials = resolve_credentials(account_cfg)
     youtube = build_youtube_client(credentials)
 
-    video_id = upload_video(youtube, video_path, script, account_cfg, genre_cfg, dry_run=dry_run)
+    video_id = upload_video(youtube, video_path, script, account_cfg, genre_cfg,
+                            fmt=fmt, dry_run=dry_run)
 
     if thumbnail_path.exists():
         upload_thumbnail(youtube, video_id, thumbnail_path, dry_run=dry_run)
@@ -147,6 +161,7 @@ def upload_pipeline(account_id: str, run_id: str, settings: dict, dry_run: bool 
         "url": f"https://youtu.be/{video_id}",
         "account_id": account_id,
         "run_id": run_id,
+        "format": fmt,
         "dry_run": dry_run,
     }
     result_path = run_dir / "upload_result.json"
@@ -160,12 +175,15 @@ def main():
     parser = argparse.ArgumentParser(description="YouTube に動画を投稿する")
     parser.add_argument("--account-id", required=True)
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--format", default="landscape",
+                        help="フォーマット: landscape | shorts | tiktok")
     parser.add_argument("--dry-run", action="store_true", help="実際に投稿せずテストする")
     args = parser.parse_args()
 
     settings = load_settings()
     dry_run = args.dry_run or settings["pipeline"].get("dry_run", False)
-    result = upload_pipeline(args.account_id, args.run_id, settings, dry_run=dry_run)
+    result = upload_pipeline(args.account_id, args.run_id, settings,
+                             fmt=args.format, dry_run=dry_run)
     print(f"[07] 投稿完了: {result['url']}")
 
 

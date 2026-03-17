@@ -50,3 +50,31 @@ pipeline:
   cleanup_on_success: true
   cleanup_on_failure: false   # デバッグのため失敗時は残す
   dry_run: false              # trueにすると投稿せずにファイルだけ生成
+
+# ショート動画（YouTube Shorts / TikTok）用設定
+shorts:
+  resolution: "1080x1920"
+  fps: 30
+  target_duration_sec: 55    # 60秒未満（YouTube Shortsの条件）
+  codec: "libx264"
+  crf: 23
+  preset: "fast"
+  audio_codec: "aac"
+  audio_bitrate: "192k"
+
+  subtitle:
+    font_size: 30             # 縦型は横幅が狭いため少し大きめ
+    margin_v: 120             # 下部UI（いいね・コメントボタン）と重ならない位置
+
+  thumbnail:
+    width: 1080
+    height: 1920
+    font_size: 48
+    extract_time_pct: 0.35
+
+  pexels:
+    per_section: 2
+    min_duration_sec: 3       # ショートは短いクリップでもOK
+    max_duration_sec: 20
+    min_width: 1080           # 縦型素材も可（1080p）
+    locale: "ja-JP"

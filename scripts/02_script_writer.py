@@ -25,7 +25,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from scripts.utils import load_genre_config, load_settings, get_run_dir
 
 
-def generate_script(concept: dict, genre_cfg: dict, duration_sec: int, run_dir: Path) -> dict:
+SHORT_FORMATS = ("shorts", "tiktok")
+
+
+def generate_script(concept: dict, genre_cfg: dict, duration_sec: int,
+                    run_dir: Path, fmt: str = "landscape") -> dict:
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
     outline_text = "\n".join(
@@ -33,10 +37,54 @@ def generate_script(concept: dict, genre_cfg: dict, duration_sec: int, run_dir: 
     )
     tags_str = "、".join(genre_cfg["tags"])
 
-    # 目標文字数: 日本語の読み上げ速度 ~300文字/分
-    target_chars = int(duration_sec / 60 * 300)
+    if fmt in SHORT_FORMATS:
+        # ショート動画用: 55秒・約275文字
+        duration_sec = 55
+        target_chars = 275
 
-    prompt = f"""あなたはYouTubeで高い視聴維持率を誇るナレーション原稿ライターです。
+        prompt = f"""あなたはYouTubeショート・TikTokで1000万再生を誇るバイラル原稿ライターです。
+
+トピック: {concept['topic']}
+フック（最初の一言）: {concept['hook']}
+
+動画構成（合計55秒）:
+{outline_text}
+
+目標時間: 55秒（約{target_chars}文字）
+ジャンル: {genre_cfg['name_jp']}
+
+【ショート動画の絶対ルール】
+1. 最初の文はフックそのままか、それ以上に衝撃的な一言（3秒で視聴者を止める）
+2. 1センテンスは15文字以内（テロップに収まる・読みやすい）
+3. 句読点少なく、テンポよく、会話口調（です・ます調より話し言葉）
+4. 「え？」「まじで？」「知らなかった」と思わせる情報を畳み掛ける
+5. 最後はチャンネル登録・いいね・保存への自然な誘導
+
+【出力形式】必ず以下のJSONのみを返してください（マークダウン不要）:
+{{
+  "title": "ショート動画タイトル（25文字以内・インパクト重視・#Shortsは含めない）",
+  "description": "概要文（150〜200文字。動画の内容1〜2文 + ハッシュタグ5〜8個）",
+  "tags": ["タグ1", ...(10〜15個)],
+  "sentences": [
+    {{"text": "フックの一言（15文字以内）", "section": "フック・掴み（10秒）", "index": 0}},
+    {{"text": "次の一言", "section": "フック・掴み（10秒）", "index": 1}},
+    ...
+  ]
+}}
+
+注意:
+- sentencesの各要素は1文・15文字以内の短い単位（字幕表示のため）
+- 合計文字数が約{target_chars}文字になるよう調整
+- section名はoutlineのtitleと一致
+- indexは0始まりの連番"""
+
+        max_tokens = 2000
+
+    else:
+        # 横型動画用: ジャンルの設定通りの尺
+        target_chars = int(duration_sec / 60 * 300)
+
+        prompt = f"""あなたはYouTubeで高い視聴維持率を誇るナレーション原稿ライターです。
 
 トピック: {concept['topic']}
 冒頭の掴み: {concept['hook']}
@@ -75,9 +123,11 @@ def generate_script(concept: dict, genre_cfg: dict, duration_sec: int, run_dir: 
 - indexは0始まりの連番
 - descriptionにはYouTube SEOに効くキーワードを自然に含めること"""
 
+        max_tokens = 8000
+
     message = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=8000,
+        max_tokens=max_tokens,
         messages=[{"role": "user", "content": prompt}],
     )
 
@@ -93,7 +143,7 @@ def generate_script(concept: dict, genre_cfg: dict, duration_sec: int, run_dir: 
         json.dump(script, f, ensure_ascii=False, indent=2)
 
     total_chars = sum(len(s["text"]) for s in script["sentences"])
-    print(f"[02] 原稿生成完了: {len(script['sentences'])}文、合計{total_chars}文字")
+    print(f"[02] 原稿生成完了: {len(script['sentences'])}文、合計{total_chars}文字 [{fmt}]")
     print(f"[02] タイトル: {script['title']}")
     return script
 
@@ -102,6 +152,8 @@ def main():
     parser = argparse.ArgumentParser(description="日本語ナレーション原稿を生成する")
     parser.add_argument("--account-id", required=True)
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--format", default="landscape",
+                        help="フォーマット: landscape | shorts | tiktok")
     args = parser.parse_args()
 
     genre_cfg = load_genre_config(args.account_id)
@@ -112,7 +164,7 @@ def main():
     with open(concept_path, encoding="utf-8") as f:
         concept = json.load(f)
 
-    generate_script(concept, genre_cfg, genre_cfg["duration_sec"], run_dir)
+    generate_script(concept, genre_cfg, genre_cfg["duration_sec"], run_dir, fmt=args.format)
 
 
 if __name__ == "__main__":

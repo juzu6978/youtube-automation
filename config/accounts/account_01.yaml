@@ -18,6 +18,14 @@ content:
   genre: "technology"           # config/genres.yaml の id と一致させること
   secondary_genres:             # Pexels検索が空振りした場合のフォールバックジャンル
     - "knowledge"
+  formats:                      # 投稿フォーマット: landscape | shorts | tiktok
+    - landscape
+    - shorts
+  # TikTokも自動投稿したい場合は以下を追加:
+  # tiktok_credentials:
+  #   access_token_secret: "TIKTOK_ACCESS_TOKEN_ACCT01"
+  #   client_key_secret:   "TIKTOK_CLIENT_KEY"
+  #   client_secret_secret: "TIKTOK_CLIENT_SECRET"
   video_title_template: null    # null = Claude が生成したタイトルをそのまま使用
   made_for_kids: false
   default_language: "ja"

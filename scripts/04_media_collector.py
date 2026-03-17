@@ -119,14 +119,23 @@ def download_video(url: str, output_path: Path, timeout: int = 60) -> bool:
         return False
 
 
-def collect_clips(concept: dict, settings: dict, run_dir: Path) -> list[dict]:
+SHORT_FORMATS = ("shorts", "tiktok")
+
+
+def collect_clips(concept: dict, settings: dict, run_dir: Path, fmt: str = "landscape") -> list[dict]:
     clips_dir = run_dir / "clips"
     clips_dir.mkdir(exist_ok=True)
 
-    per_section = settings["pexels"]["per_section"]
-    min_duration = settings["pexels"]["min_duration_sec"]
-    max_duration = settings["pexels"]["max_duration_sec"]
-    min_width = settings["pexels"]["min_width"]
+    # shorts/tiktok 用設定（min_width=1080、短いクリップOK）
+    if fmt in SHORT_FORMATS:
+        pexels_cfg = settings["shorts"]["pexels"]
+    else:
+        pexels_cfg = settings["pexels"]
+
+    per_section = pexels_cfg["per_section"]
+    min_duration = pexels_cfg["min_duration_sec"]
+    max_duration = pexels_cfg["max_duration_sec"]
+    min_width = pexels_cfg["min_width"]
 
     downloaded_clips = []
     used_ids = set()
@@ -182,6 +191,8 @@ def main():
     parser = argparse.ArgumentParser(description="Pexels/Pixabayから動画素材をダウンロード")
     parser.add_argument("--account-id", required=True)
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--format", default="landscape",
+                        help="フォーマット: landscape | shorts | tiktok")
     args = parser.parse_args()
 
     settings = load_settings()
@@ -191,7 +202,7 @@ def main():
     with open(concept_path, encoding="utf-8") as f:
         concept = json.load(f)
 
-    collect_clips(concept, settings, run_dir)
+    collect_clips(concept, settings, run_dir, fmt=args.format)
 
 
 if __name__ == "__main__":
