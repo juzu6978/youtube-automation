@@ -32,6 +32,7 @@ PIPELINE_STEPS = [
 ]
 
 SAMPLE_DIR = Path(__file__).parent.parent / "assets" / "sample"
+SCRIPTS_DIR = Path(__file__).parent.parent / "assets" / "scripts"
 
 SHORT_FORMATS = ("shorts", "tiktok")  # 縦型（9:16）フォーマット
 
@@ -76,32 +77,65 @@ def run_upload(account_id: str, run_id: str, fmt: str, dry_run: bool):
         raise RuntimeError(f"{label}に失敗しました（終了コード: {result.returncode}）")
 
 
+def _resolve_content_files(src_dir: Path, fmt: str) -> dict[str, Path]:
+    """
+    コンテンツディレクトリから concept.json / script.json の実パスを解決する。
+    shorts/tiktok の場合は *_shorts.json を優先し、なければ通常版にフォールバック。
+    """
+    resolved = {}
+    for base in ("concept", "script"):
+        if fmt in SHORT_FORMATS:
+            path = src_dir / f"{base}_shorts.json"
+            if not path.exists():
+                path = src_dir / f"{base}.json"   # フォールバック
+        else:
+            path = src_dir / f"{base}.json"
+        resolved[f"{base}.json"] = path
+    return resolved
+
+
 def copy_sample_data(run_dir: Path, fmt: str = "landscape"):
     """assets/sample/ のJSONをrun_dirにコピーしてステップ01・02をスキップできるようにする。"""
-    for fname in ("concept.json", "script.json"):
-        # shorts/tiktok 用サンプルファイルを優先して探す
-        if fmt in SHORT_FORMATS:
-            base = fname.replace(".json", "")
-            src = SAMPLE_DIR / f"{base}_shorts.json"
-            if not src.exists():
-                src = SAMPLE_DIR / fname  # フォールバック
-        else:
-            src = SAMPLE_DIR / fname
-
-        dst = run_dir / fname
+    for dst_name, src in _resolve_content_files(SAMPLE_DIR, fmt).items():
         if not src.exists():
             raise FileNotFoundError(f"サンプルファイルが見つかりません: {src}")
-        shutil.copy2(src, dst)
-        print(f"[SAMPLE] {src.name} → {dst}")
+        shutil.copy2(src, run_dir / dst_name)
+        print(f"[SAMPLE] {src.name} → {run_dir / dst_name}")
+
+
+def copy_topic_data(run_dir: Path, fmt: str, topic: str):
+    """
+    assets/scripts/{topic}/ のJSONをrun_dirにコピーしてステップ01・02をスキップする。
+    topic には任意のディレクトリ名を指定（例: chatgpt_work, smartphone_tips）。
+    """
+    topic_dir = SCRIPTS_DIR / topic
+    if not topic_dir.is_dir():
+        available = [d.name for d in SCRIPTS_DIR.iterdir() if d.is_dir() and not d.name.startswith("_")]
+        raise FileNotFoundError(
+            f"トピック '{topic}' が見つかりません: {topic_dir}\n"
+            f"利用可能なトピック: {available}"
+        )
+    for dst_name, src in _resolve_content_files(topic_dir, fmt).items():
+        if not src.exists():
+            raise FileNotFoundError(
+                f"コンテンツファイルが見つかりません: {src}\n"
+                f"ファイル名は concept.json / script.json （shorts用は concept_shorts.json / script_shorts.json）"
+            )
+        shutil.copy2(src, run_dir / dst_name)
+        print(f"[TOPIC:{topic}] {src.name} → {run_dir / dst_name}")
 
 
 def run_pipeline(account_id: str, run_id: str, fmt: str,
-                 dry_run: bool = False, use_sample: bool = False):
+                 dry_run: bool = False, use_sample: bool = False, topic: str = ""):
     settings = load_settings()
     run_dir = get_run_dir(account_id, run_id, settings)
     run_dir.mkdir(parents=True, exist_ok=True)
 
     fmt_label = {"landscape": "横型 (16:9)", "shorts": "縦型 Shorts (9:16)", "tiktok": "縦型 TikTok (9:16)"}.get(fmt, fmt)
+
+    # コンテンツ提供モードを決定
+    skip_content_gen = bool(topic) or use_sample
+    content_mode = f"ライブラリ ({topic})" if topic else ("サンプル" if use_sample else "Claude API")
 
     print(f"\n{'='*60}")
     print(f"  YouTube Automation Pipeline")
@@ -109,21 +143,23 @@ def run_pipeline(account_id: str, run_id: str, fmt: str,
     print(f"  Run ID     : {run_id}")
     print(f"  Format     : {fmt_label}")
     print(f"  Dry Run    : {dry_run}")
-    print(f"  Use Sample : {use_sample}")
+    print(f"  Content    : {content_mode}")
     print(f"  Work Dir   : {run_dir}")
     print(f"{'='*60}")
 
-    # --use-sample の場合、事前生成済みのJSONをコピーしてAPI呼び出しをスキップ
-    if use_sample:
+    # コンテンツJSONをrun_dirにコピー（ステップ01・02をスキップ）
+    if topic:
+        copy_topic_data(run_dir, fmt, topic)
+    elif use_sample:
         copy_sample_data(run_dir, fmt)
 
     extra_args = ["--format", fmt]
 
     try:
         for script_name, label in PIPELINE_STEPS:
-            # --use-sample の場合、ステップ01・02はスキップ
-            if use_sample and script_name in ("01_concept_generator", "02_script_writer"):
-                print(f"\n[SKIP] {label}（--use-sample モード）")
+            # topic または use_sample の場合、ステップ01・02はスキップ
+            if skip_content_gen and script_name in ("01_concept_generator", "02_script_writer"):
+                print(f"\n[SKIP] {label}（{content_mode}モード）")
                 continue
             run_step(script_name, label, account_id, run_id, extra_args=extra_args)
 
@@ -166,6 +202,8 @@ def main():
                         help="assets/sample/ の事前生成JSONを使用（Anthropic API不要）")
     parser.add_argument("--format", default=None,
                         help="フォーマット指定: landscape | shorts | tiktok（省略時はaccount設定に従う）")
+    parser.add_argument("--topic", default="",
+                        help="assets/scripts/{topic}/ のコンテンツを使用（Claude API不要）")
     args = parser.parse_args()
 
     run_id_base = args.run_id or datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -181,7 +219,7 @@ def main():
         # フォーマットごとに独立した run_id（ディレクトリ）を使う
         run_id = f"{run_id_base}_{fmt}"
         run_pipeline(args.account_id, run_id, fmt,
-                     dry_run=args.dry_run, use_sample=args.use_sample)
+                     dry_run=args.dry_run, use_sample=args.use_sample, topic=args.topic)
 
 
 if __name__ == "__main__":

@@ -26,6 +26,11 @@ on:
         type: boolean
         default: false
         description: "trueにするとAssets/sample/のJSONを使用（Anthropic API不要）"
+      topic:
+        required: false
+        type: string
+        default: ""
+        description: "assets/scripts/{topic}/ のコンテンツを使用（例: chatgpt_work）"
     secrets:
       YOUTUBE_REFRESH_TOKEN:
         required: true
@@ -118,6 +123,9 @@ jobs:
           fi
           if [ "${{ inputs.use_sample }}" = "true" ]; then
             EXTRA_ARGS="$EXTRA_ARGS --use-sample"
+          fi
+          if [ -n "${{ inputs.topic }}" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --topic ${{ inputs.topic }}"
           fi
           python scripts/main.py \
             --account-id "${{ inputs.account_id }}" \
