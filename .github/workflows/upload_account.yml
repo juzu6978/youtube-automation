@@ -31,6 +31,11 @@ on:
         type: string
         default: ""
         description: "assets/scripts/{topic}/ のコンテンツを使用（例: chatgpt_work）"
+      format:
+        required: false
+        type: string
+        default: ""
+        description: "フォーマット指定: landscape | shorts | tiktok（省略時はaccount設定に従う）"
     secrets:
       YOUTUBE_REFRESH_TOKEN:
         required: true
@@ -126,6 +131,9 @@ jobs:
           fi
           if [ -n "${{ inputs.topic }}" ]; then
             EXTRA_ARGS="$EXTRA_ARGS --topic ${{ inputs.topic }}"
+          fi
+          if [ -n "${{ inputs.format }}" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --format ${{ inputs.format }}"
           fi
           python scripts/main.py \
             --account-id "${{ inputs.account_id }}" \

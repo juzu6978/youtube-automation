@@ -22,6 +22,10 @@ on:
         description: "コンテンツライブラリから使用（例: chatgpt_work, smartphone_tips）空欄=Claude APIで自動生成"
         type: string
         default: ""
+      format:
+        description: "フォーマット: landscape=横型16:9 / shorts=縦型Shorts / tiktok=縦型TikTok / 空欄=アカウント設定に従う"
+        type: string
+        default: ""
 
 jobs:
   upload:
@@ -31,6 +35,7 @@ jobs:
       dry_run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
       use_sample: ${{ github.event_name == 'workflow_dispatch' && inputs.use_sample || false }}
       topic: ${{ github.event_name == 'workflow_dispatch' && inputs.topic || '' }}
+      format: ${{ github.event_name == 'workflow_dispatch' && inputs.format || '' }}
     secrets:
       YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN_ACCT01 }}
       YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID_ACCT01 }}
