@@ -61,17 +61,21 @@ def upload_video(youtube, video_path: Path, script: dict,
     # Shorts の場合はタイトル末尾に #Shorts を付加し、説明文先頭にも追記
     title = script["title"]
     description = script["description"]
+    tags = script.get("tags", []) + genre_cfg.get("tags", [])
     if fmt in SHORT_FORMATS:
         if not title.endswith("#Shorts"):
             title = title + " #Shorts"
         if not description.startswith("#Shorts"):
             description = "#Shorts\n\n" + description
+        # YouTube Shorts 認識のためタグにも追加
+        if "#Shorts" not in tags and "Shorts" not in tags:
+            tags = tags + ["#Shorts", "Shorts"]
 
     body = {
         "snippet": {
             "title": title,
             "description": description,
-            "tags": script.get("tags", []) + genre_cfg.get("tags", []),
+            "tags": tags,
             "categoryId": str(content_cfg.get("category_id", genre_cfg.get("category_id", 22))),
             "defaultLanguage": content_cfg.get("default_language", "ja"),
         },

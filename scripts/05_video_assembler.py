@@ -109,6 +109,15 @@ def assemble_video(run_dir: Path, settings: dict, fmt: str = "landscape") -> Pat
     # ナレーション尺を取得
     narration_ms = timings[-1]["end_ms"] if timings else 300000
 
+    # Shorts/TikTok: target_duration_sec を超えないようにキャップ
+    # YouTube Shorts は60秒以下が必須条件
+    if fmt in SHORT_FORMATS:
+        max_sec = settings["shorts"].get("target_duration_sec", 55)
+        max_ms = max_sec * 1000
+        if narration_ms > max_ms:
+            print(f"[05] ⚠️ ナレーション尺 {narration_ms/1000:.1f}s が Shorts 上限 {max_sec}s を超えています。{max_sec}s にカットします。")
+            narration_ms = max_ms
+
     # concat リスト生成
     concat_path = build_concat_list(clips, narration_ms, timings, run_dir)
 
