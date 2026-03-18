@@ -152,6 +152,11 @@ jobs:
             if [ -f "$YT_RESULT" ]; then
               echo "=== YouTube Upload Result (${fmt}) ==="
               cat "$YT_RESULT"
+              if grep -q '"dry_run": true' "$YT_RESULT"; then
+                echo ""
+                echo "⚠️  WARNING: DRY RUN mode was active - no actual YouTube upload performed!"
+                echo "⚠️  To upload for real, uncheck 'dry_run' and run again."
+              fi
             fi
             if [ -f "$TT_RESULT" ]; then
               echo "=== TikTok Upload Result (${fmt}) ==="

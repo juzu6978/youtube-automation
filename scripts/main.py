@@ -146,6 +146,9 @@ def run_pipeline(account_id: str, run_id: str, fmt: str,
     print(f"  Content    : {content_mode}")
     print(f"  Work Dir   : {run_dir}")
     print(f"{'='*60}")
+    if dry_run:
+        print(f"\n  ⚠️  DRY RUN MODE: YouTubeへの投稿は行われません！")
+        print(f"  ⚠️  実際に投稿するには dry_run チェックを外して再実行してください。\n")
 
     # コンテンツJSONをrun_dirにコピー（ステップ01・02をスキップ）
     if topic:
@@ -174,7 +177,11 @@ def run_pipeline(account_id: str, run_id: str, fmt: str,
             print(f"\n{'='*60}")
             print(f"  完了！ [{fmt_label}]")
             print(f"  タイトル: {result.get('title', '(不明)')}")
-            print(f"  URL     : {result.get('url', '(dry run)')}")
+            if result.get("dry_run"):
+                print(f"  ⚠️  DRY RUN - YouTube投稿はスキップされました")
+                print(f"  URL     : (投稿なし)")
+            else:
+                print(f"  URL     : {result.get('url', '(不明)')}")
             print(f"{'='*60}\n")
 
     except RuntimeError as e:
