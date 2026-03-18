@@ -23,9 +23,14 @@ on:
         type: string
         default: ""
       format:
-        description: "フォーマット: landscape=横型16:9 / shorts=縦型Shorts / tiktok=縦型TikTok / 空欄=アカウント設定に従う"
-        type: string
-        default: ""
+        description: "フォーマット: auto=アカウント設定に従う / landscape=横型16:9 / shorts=縦型Shorts / tiktok=縦型TikTok"
+        type: choice
+        default: "auto"
+        options:
+          - auto
+          - landscape
+          - shorts
+          - tiktok
 
 jobs:
   upload:
@@ -35,7 +40,7 @@ jobs:
       dry_run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
       use_sample: ${{ github.event_name == 'workflow_dispatch' && inputs.use_sample || false }}
       topic: ${{ github.event_name == 'workflow_dispatch' && inputs.topic || '' }}
-      format: ${{ github.event_name == 'workflow_dispatch' && inputs.format || '' }}
+      format: ${{ github.event_name == 'workflow_dispatch' && inputs.format || 'auto' }}
     secrets:
       YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN_ACCT01 }}
       YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID_ACCT01 }}

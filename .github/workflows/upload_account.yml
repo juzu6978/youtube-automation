@@ -34,8 +34,8 @@ on:
       format:
         required: false
         type: string
-        default: ""
-        description: "フォーマット指定: landscape | shorts | tiktok（省略時はaccount設定に従う）"
+        default: "auto"
+        description: "フォーマット指定: auto | landscape | shorts | tiktok（autoはaccount設定に従う）"
     secrets:
       YOUTUBE_REFRESH_TOKEN:
         required: true
@@ -132,7 +132,7 @@ jobs:
           if [ -n "${{ inputs.topic }}" ]; then
             EXTRA_ARGS="$EXTRA_ARGS --topic ${{ inputs.topic }}"
           fi
-          if [ -n "${{ inputs.format }}" ]; then
+          if [ "${{ inputs.format }}" != "auto" ] && [ -n "${{ inputs.format }}" ]; then
             EXTRA_ARGS="$EXTRA_ARGS --format ${{ inputs.format }}"
           fi
           python scripts/main.py \
