@@ -1,0 +1,104 @@
+name: Upload Shorts Daily - account_01
+
+on:
+  schedule:
+    - cron: "0 0 * * *"    # 09:00 JST
+    - cron: "0 12 * * *"   # 21:00 JST
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run（投稿スキップ・カウンター更新なし）"
+        type: boolean
+        default: false
+      topic:
+        description: "手動トピック上書き（空欄=カウンターから自動選択）"
+        type: string
+        default: ""
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      topic: ${{ steps.calc.outputs.topic }}
+      counter: ${{ steps.calc.outputs.counter }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: calc
+        name: Determine topic from counter
+        run: |
+          # 手動実行でtopic指定がある場合はそちらを優先
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.topic }}" ]; then
+            echo "topic=${{ inputs.topic }}" >> $GITHUB_OUTPUT
+            echo "counter=-1" >> $GITHUB_OUTPUT
+            echo "▶ 手動指定トピック: ${{ inputs.topic }}"
+            exit 0
+          fi
+
+          COUNTER_FILE="assets/scripts/shorts/.run_counter"
+          COUNTER=$(cat "$COUNTER_FILE" 2>/dev/null || echo "0")
+          echo "現在のカウンター: $COUNTER"
+
+          if [ "$COUNTER" -ge 10 ]; then
+            echo "❌ 全スロット使用済みです（counter=$COUNTER）"
+            echo "shorts/ フォルダのコンテンツを補充し、.run_counter を 0 にリセットしてください。"
+            exit 1
+          fi
+
+          FOLDERS=("day01_run1" "day01_run2" "day02_run1" "day02_run2" "day03_run1" "day03_run2" "day04_run1" "day04_run2" "day05_run1" "day05_run2")
+          TOPIC="shorts/${FOLDERS[$COUNTER]}"
+
+          echo "topic=$TOPIC" >> $GITHUB_OUTPUT
+          echo "counter=$COUNTER" >> $GITHUB_OUTPUT
+          echo "▶ 選択フォルダ: $TOPIC (スロット $COUNTER / 9)"
+
+  upload:
+    needs: prepare
+    uses: ./.github/workflows/upload_account.yml
+    with:
+      account_id: "account_01"
+      topic: ${{ needs.prepare.outputs.topic }}
+      format: "shorts"
+      dry_run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+      use_sample: false
+    secrets:
+      YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN_ACCT01 }}
+      YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID_ACCT01 }}
+      YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET_ACCT01 }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GCP_CREDENTIALS_JSON: ${{ secrets.GCP_CREDENTIALS_JSON }}
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+      PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+
+  increment:
+    needs: [prepare, upload]
+    runs-on: ubuntu-latest
+    # アップロード成功時のみカウンターを更新
+    # dry_run=true の場合と手動topic上書き(counter=-1)の場合はスキップ
+    if: >
+      needs.upload.result == 'success' &&
+      needs.prepare.outputs.counter != '-1' &&
+      !(github.event_name == 'workflow_dispatch' && inputs.dry_run == true)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+      - name: Increment counter
+        run: |
+          COUNTER_FILE="assets/scripts/shorts/.run_counter"
+          CURRENT=$(cat "$COUNTER_FILE")
+          NEXT=$(( CURRENT + 1 ))
+          echo "$NEXT" > "$COUNTER_FILE"
+          echo "✅ カウンター更新: $CURRENT → $NEXT"
+
+          if [ "$NEXT" -ge 10 ]; then
+            echo "⚠️ 全スロットを使用しました。次回実行前にコンテンツを補充し .run_counter を 0 にリセットしてください。"
+          else
+            REMAINING=$(( 10 - NEXT ))
+            echo "📊 残りスロット: $REMAINING / 10"
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$COUNTER_FILE"
+          git commit -m "chore: shorts run_counter $CURRENT → $NEXT [skip ci]"
+          git push

@@ -106,11 +106,19 @@ def copy_sample_data(run_dir: Path, fmt: str = "landscape"):
 def copy_topic_data(run_dir: Path, fmt: str, topic: str):
     """
     assets/scripts/{topic}/ のJSONをrun_dirにコピーしてステップ01・02をスキップする。
-    topic には任意のディレクトリ名を指定（例: chatgpt_work, smartphone_tips）。
+    topic にはパス区切りで指定可能（例: long/chatgpt_work, shorts/day01_run1）。
     """
     topic_dir = SCRIPTS_DIR / topic
     if not topic_dir.is_dir():
-        available = [d.name for d in SCRIPTS_DIR.iterdir() if d.is_dir() and not d.name.startswith("_")]
+        available = []
+        for d in sorted(SCRIPTS_DIR.iterdir()):
+            if not d.is_dir() or d.name.startswith("_"):
+                continue
+            children = sorted(s.name for s in d.iterdir() if s.is_dir())
+            if children:
+                available.extend(f"{d.name}/{c}" for c in children)
+            else:
+                available.append(d.name)
         raise FileNotFoundError(
             f"トピック '{topic}' が見つかりません: {topic_dir}\n"
             f"利用可能なトピック: {available}"

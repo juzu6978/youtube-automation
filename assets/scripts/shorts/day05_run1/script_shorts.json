@@ -1,0 +1,16 @@
+{
+  "title": "【day05_run1】Shortsタイトル（25文字以内推奨） #Shorts",
+  "description": "#Shorts\n\n【day05_run1】1〜2行の簡潔な説明文。\n\n#タグ1 #タグ2 #タグ3",
+  "tags": ["タグ1", "タグ2", "タグ3", "Shorts"],
+  "sentences": [
+    {"text": "フックの一言（短くインパクト重視）", "section": "フック・掴み（10秒）", "index": 0},
+    {"text": "驚きの事実や問いかけ", "section": "フック・掴み（10秒）", "index": 1},
+    {"text": "今すぐ教えます", "section": "フック・掴み（10秒）", "index": 2},
+    {"text": "本編ポイント1（短文・テンポよく）", "section": "本編・核心（35秒）", "index": 3},
+    {"text": "本編ポイント2", "section": "本編・核心（35秒）", "index": 4},
+    {"text": "本編ポイント3", "section": "本編・核心（35秒）", "index": 5},
+    {"text": "本編ポイント4", "section": "本編・核心（35秒）", "index": 6},
+    {"text": "まとめ・行動喚起", "section": "CTA・締め（10秒）", "index": 7},
+    {"text": "フォロー・いいねお願いします！", "section": "CTA・締め（10秒）", "index": 8}
+  ]
+}
