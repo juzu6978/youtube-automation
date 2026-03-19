@@ -33,7 +33,7 @@ content:
 tts:
   voice_id: "ja-JP-Neural2-C"   # 落ち着いた男性声
   provider: "google_tts"
-  speaking_rate: 0.95
+  speaking_rate: 1.5
   pitch: 0.0
 
 schedule:
