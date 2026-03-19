@@ -1,0 +1,39 @@
+{
+  "topic": "スマホ便利技10選！知らないと損する裏技まとめ",
+  "hook": "あなたのスマホ、まだ10%しか使いこなせていないかもしれません。今日から毎日が変わる便利技を一挙公開します。",
+  "outline": [
+    {
+      "title": "イントロ・掴み",
+      "keywords": ["smartphone", "mobile phone", "technology lifestyle"]
+    },
+    {
+      "title": "バッテリーを劇的に長持ちさせる設定",
+      "keywords": ["phone battery", "charging", "mobile settings"]
+    },
+    {
+      "title": "知らないと損する写真・カメラ機能",
+      "keywords": ["smartphone camera", "photo editing", "mobile photography"]
+    },
+    {
+      "title": "通知管理で集中力を3倍にする方法",
+      "keywords": ["phone notification", "focus mode", "digital wellbeing"]
+    },
+    {
+      "title": "セキュリティ設定で個人情報を守る",
+      "keywords": ["phone security", "privacy screen", "mobile protection"]
+    },
+    {
+      "title": "時短アプリ活用術・音声入力の実力",
+      "keywords": ["voice input", "mobile productivity", "app efficiency"]
+    },
+    {
+      "title": "ストレージ・通信費の節約テクニック",
+      "keywords": ["phone storage", "data saving", "mobile data"]
+    },
+    {
+      "title": "まとめ・行動促進",
+      "keywords": ["smartphone tips", "summary", "motivation"]
+    }
+  ],
+  "search_keywords": ["smartphone", "mobile phone", "phone screen", "technology", "digital lifestyle"]
+}
