@@ -1,6 +1,6 @@
 {
-  "title": "【day03_run1】Shortsタイトル（25文字以内推奨） #Shorts",
-  "description": "#Shorts\n\n【day03_run1】1〜2行の簡潔な説明文。\n\n#タグ1 #タグ2 #タグ3",
+  "title": "Shortsタイトル（25文字以内推奨） #Shorts",
+  "description": "#Shorts\n\n1〜2行の簡潔な説明文。\n\n#タグ1 #タグ2 #タグ3",
   "tags": ["タグ1", "タグ2", "タグ3", "Shorts"],
   "sentences": [
     {"text": "フックの一言（短くインパクト重視）", "section": "フック・掴み（10秒）", "index": 0},
@@ -10,7 +10,25 @@
     {"text": "本編ポイント2", "section": "本編・核心（35秒）", "index": 4},
     {"text": "本編ポイント3", "section": "本編・核心（35秒）", "index": 5},
     {"text": "本編ポイント4", "section": "本編・核心（35秒）", "index": 6},
-    {"text": "まとめ・行動喚起", "section": "CTA・締め（10秒）", "index": 7},
-    {"text": "フォロー・いいねお願いします！", "section": "CTA・締め（10秒）", "index": 8}
+    {"text": "本編ポイント5", "section": "本編・核心（35秒）", "index": 7},
+    {"text": "本編ポイント6", "section": "本編・核心（35秒）", "index": 8},
+    {"text": "本編ポイント7", "section": "本編・核心（35秒）", "index": 9},
+    {"text": "本編ポイント8", "section": "本編・核心（35秒）", "index": 10},
+    {"text": "本編ポイント9", "section": "本編・核心（35秒）", "index": 11},
+    {"text": "本編ポイント10", "section": "本編・核心（35秒）", "index": 12},
+    {"text": "本編ポイント11", "section": "本編・核心（35秒）", "index": 13},
+    {"text": "本編ポイント12", "section": "本編・核心（35秒）", "index": 14},
+    {"text": "本編ポイント13", "section": "本編・核心（35秒）", "index": 15},
+    {"text": "本編ポイント14", "section": "本編・核心（35秒）", "index": 16},
+    {"text": "本編ポイント15", "section": "本編・核心（35秒）", "index": 17},
+    {"text": "本編ポイント16", "section": "本編・核心（35秒）", "index": 18},
+    {"text": "本編ポイント17", "section": "本編・核心（35秒）", "index": 19},
+    {"text": "本編ポイント18", "section": "本編・核心（35秒）", "index": 20},
+    {"text": "本編ポイント19", "section": "本編・核心（35秒）", "index": 21},
+    {"text": "本編ポイント20", "section": "本編・核心（35秒）", "index": 22},
+    {"text": "まとめの一言", "section": "CTA・締め（10秒）", "index": 23},
+    {"text": "行動喚起（チャンネル登録・保存など）", "section": "CTA・締め（10秒）", "index": 24},
+    {"text": "フォロー・いいねお願いします！", "section": "CTA・締め（10秒）", "index": 25},
+    {"text": "次回もお楽しみに！", "section": "CTA・締め（10秒）", "index": 26}
   ]
 }
