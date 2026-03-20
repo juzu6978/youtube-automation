@@ -1,15 +1,85 @@
 {
-  "topic": "ChatGPTが変えた私たちの働き方",
-  "hook": "あなたの会社、まだAIを使わずに戦えますか？今から始めれば5年後に大差がつきます。その全貌を8分で解説します。",
+  "topic": "人間関係を変える行動心理学7つの法則",
+  "hook": "心理学を知っているだけで、人間関係が180度変わります。7つの法則を完全解説します。",
   "outline": [
-    {"title": "イントロ・掴み", "keywords": ["artificial intelligence", "office work", "technology future"]},
-    {"title": "ChatGPTとは何か", "keywords": ["chatbot", "AI technology", "computer screen", "language model"]},
-    {"title": "仕事への5つの影響", "keywords": ["business meeting", "productivity", "workplace digital"]},
-    {"title": "今すぐ使える活用事例7選", "keywords": ["laptop working", "digital tools", "professional success"]},
-    {"title": "AIリテラシーの高め方", "keywords": ["learning education", "online course", "skill development"]},
-    {"title": "注意点・リスク管理", "keywords": ["caution warning", "privacy security", "risk assessment"]},
-    {"title": "AIと共存する未来", "keywords": ["future technology", "human robot", "innovation"]},
-    {"title": "まとめ・行動促進", "keywords": ["summary action", "success achievement", "motivation"]}
+    {
+      "title": "イントロ・掴み",
+      "keywords": [
+        "people relationship",
+        "communication business",
+        "social success"
+      ]
+    },
+    {
+      "title": "法則1：返報性の法則",
+      "keywords": [
+        "gift giving",
+        "kindness",
+        "social exchange"
+      ]
+    },
+    {
+      "title": "法則2：一貫性の原理",
+      "keywords": [
+        "commitment decision",
+        "consistency",
+        "psychology"
+      ]
+    },
+    {
+      "title": "法則3：社会的証明",
+      "keywords": [
+        "social proof",
+        "crowd people",
+        "trust credibility"
+      ]
+    },
+    {
+      "title": "法則4：好意の法則",
+      "keywords": [
+        "friendship likability",
+        "smile",
+        "positive interaction"
+      ]
+    },
+    {
+      "title": "法則5：権威の法則",
+      "keywords": [
+        "authority expert",
+        "professional",
+        "credibility"
+      ]
+    },
+    {
+      "title": "法則6：希少性の原理",
+      "keywords": [
+        "scarcity limited",
+        "urgency",
+        "exclusive"
+      ]
+    },
+    {
+      "title": "法則7：ザイアンス効果",
+      "keywords": [
+        "familiarity exposure",
+        "repeated contact",
+        "connection"
+      ]
+    },
+    {
+      "title": "まとめ・行動促進",
+      "keywords": [
+        "summary action",
+        "relationship building",
+        "success"
+      ]
+    }
   ],
-  "search_keywords": ["artificial intelligence", "technology office", "productivity", "future work", "digital transformation"]
+  "search_keywords": [
+    "psychology",
+    "human relationship",
+    "social skills",
+    "behavioral psychology",
+    "communication"
+  ]
 }

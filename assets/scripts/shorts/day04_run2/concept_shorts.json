@@ -1,37 +1,39 @@
 {
-  "topic": "ChatGPTを日常生活で使い倒す方法",
-  "hook": "ChatGPT、検索代わりにしか使ってないなんてもったいなすぎる",
+  "topic": "先延ばし癖の正体：やる気を待ってはいけない理由",
+  "hook": "やる気が出たらやろう。これ、一生やる気は来ません。",
   "outline": [
     {
       "title": "フック・掴み（10秒）",
       "keywords": [
-        "chatgpt",
-        "artificial intelligence"
+        "procrastination lazy",
+        "time management",
+        "deadline stress"
       ]
     },
     {
       "title": "本編・核心（35秒）",
       "keywords": [
-        "AI assistant",
-        "productivity tools",
-        "chatgpt tips",
-        "text generation",
-        "AI technology"
+        "brain neuroscience",
+        "motivation psychology",
+        "action habit",
+        "productivity",
+        "behavior change"
       ]
     },
     {
       "title": "CTA・締め（10秒）",
       "keywords": [
-        "AI",
-        "technology",
-        "productivity"
+        "action taking",
+        "productivity",
+        "self improvement"
       ]
     }
   ],
   "search_keywords": [
-    "chatgpt",
-    "AI",
-    "artificial intelligence",
-    "productivity"
+    "psychology",
+    "procrastination",
+    "motivation",
+    "productivity",
+    "behavior change"
   ]
 }

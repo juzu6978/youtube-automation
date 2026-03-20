@@ -1,36 +1,39 @@
 {
-  "topic": "Googleフォトで写真を自動バックアップする方法",
-  "hook": "スマホが壊れたら写真が全部消える、その前に見てください",
+  "topic": "損失回避バイアス：なぜ人は得るよりも失うことを恐れるのか",
+  "hook": "1万円もらう喜びと、1万円を失う悲しみ。実は悲しみの方が2倍強い。",
   "outline": [
     {
       "title": "フック・掴み（10秒）",
       "keywords": [
-        "google photos",
-        "cloud storage backup"
+        "money loss",
+        "financial stress",
+        "decision making"
       ]
     },
     {
       "title": "本編・核心（35秒）",
       "keywords": [
-        "cloud backup",
-        "photo management",
-        "google photos",
-        "storage optimization",
-        "photo sharing"
+        "psychology experiment",
+        "behavioral economics",
+        "brain decision",
+        "risk aversion",
+        "investment"
       ]
     },
     {
       "title": "CTA・締め（10秒）",
       "keywords": [
-        "motivation",
-        "digital organization"
+        "financial wisdom",
+        "smart decision",
+        "awareness"
       ]
     }
   ],
   "search_keywords": [
-    "google photos",
-    "cloud backup",
-    "photo storage",
-    "smartphone"
+    "psychology",
+    "loss aversion",
+    "behavioral economics",
+    "cognitive bias",
+    "decision making"
   ]
 }

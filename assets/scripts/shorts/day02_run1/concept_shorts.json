@@ -1,36 +1,39 @@
 {
-  "topic": "Wi-Fiが遅い原因と即効解決策",
-  "hook": "Wi-Fiが遅いのはルーターのせいじゃないかも",
+  "topic": "認知的不協和：脳が都合の悪い事実を無意識に消す仕組み",
+  "hook": "「タバコは体に悪いとわかってるけど、スタイルのためだから」。これ、脳のバグです。",
   "outline": [
     {
       "title": "フック・掴み（10秒）",
       "keywords": [
-        "wifi router",
-        "internet speed"
+        "conflict thinking",
+        "brain mind",
+        "decision making"
       ]
     },
     {
       "title": "本編・核心（35秒）",
       "keywords": [
-        "wifi signal",
-        "router placement",
-        "internet connection",
-        "network speed",
-        "5ghz wifi"
+        "psychology experiment",
+        "cognitive science",
+        "human mind",
+        "rationalization",
+        "self deception"
       ]
     },
     {
       "title": "CTA・締め（10秒）",
       "keywords": [
-        "motivation",
-        "success"
+        "insight",
+        "self awareness",
+        "growth"
       ]
     }
   ],
   "search_keywords": [
-    "wifi",
-    "router",
-    "internet speed",
-    "network"
+    "psychology",
+    "cognitive dissonance",
+    "self deception",
+    "rationalization",
+    "cognitive bias"
   ]
 }

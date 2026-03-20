@@ -1,35 +1,39 @@
 {
-  "topic": "フィッシング詐欺を1秒で見破る方法",
-  "hook": "そのメール、開いたら個人情報が全部盗まれるよ",
+  "topic": "吊り橋効果：ドキドキを恋愛と勘違いする脳の錯覚",
+  "hook": "スリルを感じると恋に落ちやすい。これ、脳の誤作動です。",
   "outline": [
     {
       "title": "フック・掴み（10秒）",
       "keywords": [
-        "cyber security",
-        "phishing email"
+        "bridge adventure",
+        "couple romantic",
+        "heart emotion"
       ]
     },
     {
       "title": "本編・核心（35秒）",
       "keywords": [
-        "email security",
-        "online fraud",
-        "password security",
-        "internet safety",
-        "scam warning"
+        "brain science",
+        "adrenaline",
+        "psychology experiment",
+        "attraction",
+        "emotion"
       ]
     },
     {
       "title": "CTA・締め（10秒）",
       "keywords": [
-        "security",
-        "protection"
+        "relationship",
+        "self awareness",
+        "wisdom"
       ]
     }
   ],
   "search_keywords": [
-    "cyber security",
-    "internet safety",
-    "fraud prevention"
+    "psychology",
+    "attraction",
+    "love psychology",
+    "misattribution arousal",
+    "human emotion"
   ]
 }

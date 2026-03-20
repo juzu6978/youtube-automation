@@ -1,37 +1,39 @@
 {
-  "topic": "パスワード管理の正しい方法",
-  "hook": "そのパスワード、今すぐ変えないと口座が空になるかもしれない",
+  "topic": "マジカルナンバー7：人間の記憶の限界と正しい使い方",
+  "hook": "人間が一度に覚えられる数は7つ±2。電話番号が7桁なのはそのためです。",
   "outline": [
     {
       "title": "フック・掴み（10秒）",
       "keywords": [
-        "password security",
-        "cybersecurity"
+        "memory brain",
+        "numbers information",
+        "cognitive science"
       ]
     },
     {
       "title": "本編・核心（35秒）",
       "keywords": [
-        "password manager",
-        "two factor authentication",
-        "online security",
-        "data breach",
-        "account protection"
+        "psychology research",
+        "working memory",
+        "information chunks",
+        "learning",
+        "brain capacity"
       ]
     },
     {
       "title": "CTA・締め（10秒）",
       "keywords": [
-        "security",
-        "protection",
-        "safety"
+        "study skills",
+        "memory improvement",
+        "learning efficiency"
       ]
     }
   ],
   "search_keywords": [
-    "password security",
-    "cybersecurity",
-    "account safety",
-    "two factor authentication"
+    "psychology",
+    "memory",
+    "working memory",
+    "magical number seven",
+    "cognitive psychology"
   ]
 }

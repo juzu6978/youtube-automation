@@ -1,39 +1,109 @@
 {
-  "topic": "スマホ便利技10選！知らないと損する裏技まとめ",
-  "hook": "あなたのスマホ、まだ10%しか使いこなせていないかもしれません。今日から毎日が変わる便利技を一挙公開します。",
+  "topic": "認知バイアス入門：あなたの判断を歪める10の心理トリック",
+  "hook": "あなたの「正しい判断」の多くは、実は脳の錯覚かもしれません。10の認知バイアスを完全解説します。",
   "outline": [
     {
       "title": "イントロ・掴み",
-      "keywords": ["smartphone", "mobile phone", "technology lifestyle"]
+      "keywords": [
+        "brain thinking",
+        "decision making",
+        "psychology"
+      ]
     },
     {
-      "title": "バッテリーを劇的に長持ちさせる設定",
-      "keywords": ["phone battery", "charging", "mobile settings"]
+      "title": "確証バイアス",
+      "keywords": [
+        "confirmation bias",
+        "information filter",
+        "selective thinking"
+      ]
     },
     {
-      "title": "知らないと損する写真・カメラ機能",
-      "keywords": ["smartphone camera", "photo editing", "mobile photography"]
+      "title": "アンカリング効果",
+      "keywords": [
+        "price anchor",
+        "negotiation",
+        "first impression"
+      ]
     },
     {
-      "title": "通知管理で集中力を3倍にする方法",
-      "keywords": ["phone notification", "focus mode", "digital wellbeing"]
+      "title": "フレーミング効果",
+      "keywords": [
+        "framing message",
+        "perception",
+        "communication"
+      ]
     },
     {
-      "title": "セキュリティ設定で個人情報を守る",
-      "keywords": ["phone security", "privacy screen", "mobile protection"]
+      "title": "生存者バイアス",
+      "keywords": [
+        "survivorship bias",
+        "success story",
+        "statistics"
+      ]
     },
     {
-      "title": "時短アプリ活用術・音声入力の実力",
-      "keywords": ["voice input", "mobile productivity", "app efficiency"]
+      "title": "バンドワゴン効果",
+      "keywords": [
+        "crowd trend",
+        "popular choice",
+        "social influence"
+      ]
     },
     {
-      "title": "ストレージ・通信費の節約テクニック",
-      "keywords": ["phone storage", "data saving", "mobile data"]
+      "title": "後知恵バイアス",
+      "keywords": [
+        "hindsight bias",
+        "memory",
+        "decision review"
+      ]
+    },
+    {
+      "title": "現在バイアス",
+      "keywords": [
+        "present bias",
+        "future planning",
+        "immediate reward"
+      ]
+    },
+    {
+      "title": "帰属の誤り",
+      "keywords": [
+        "attribution error",
+        "judgment people",
+        "behavior explanation"
+      ]
+    },
+    {
+      "title": "可用性ヒューリスティック",
+      "keywords": [
+        "availability heuristic",
+        "news media",
+        "risk perception"
+      ]
+    },
+    {
+      "title": "ハロー効果",
+      "keywords": [
+        "halo effect",
+        "first impression",
+        "appearance bias"
+      ]
     },
     {
       "title": "まとめ・行動促進",
-      "keywords": ["smartphone tips", "summary", "motivation"]
+      "keywords": [
+        "critical thinking",
+        "rational decision",
+        "wisdom"
+      ]
     }
   ],
-  "search_keywords": ["smartphone", "mobile phone", "phone screen", "technology", "digital lifestyle"]
+  "search_keywords": [
+    "psychology",
+    "cognitive bias",
+    "decision making",
+    "critical thinking",
+    "behavioral psychology"
+  ]
 }
