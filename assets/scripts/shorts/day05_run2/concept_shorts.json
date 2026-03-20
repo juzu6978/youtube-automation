@@ -1,19 +1,37 @@
 {
-  "topic": "【day05_run2】Shorts動画のテーマ（短くキャッチーに）",
-  "hook": "【day05_run2】3秒で引き込む一言（例: え、まだ〇〇してるの？）",
+  "topic": "スマホと睡眠の関係・寝る前のNG行動",
+  "hook": "寝る前にスマホを見ると、こんな悪影響があります",
   "outline": [
     {
       "title": "フック・掴み（10秒）",
-      "keywords": ["英語キーワード1", "英語キーワード2"]
+      "keywords": [
+        "sleep quality",
+        "blue light smartphone"
+      ]
     },
     {
       "title": "本編・核心（35秒）",
-      "keywords": ["英語キーワード1", "英語キーワード2", "英語キーワード3"]
+      "keywords": [
+        "blue light",
+        "melatonin",
+        "sleep health",
+        "night mode",
+        "digital wellness"
+      ]
     },
     {
       "title": "CTA・締め（10秒）",
-      "keywords": ["motivation", "success"]
+      "keywords": [
+        "sleep",
+        "health",
+        "wellness"
+      ]
     }
   ],
-  "search_keywords": ["英語キーワード1", "英語キーワード2", "英語キーワード3"]
+  "search_keywords": [
+    "sleep quality",
+    "blue light",
+    "smartphone",
+    "health"
+  ]
 }

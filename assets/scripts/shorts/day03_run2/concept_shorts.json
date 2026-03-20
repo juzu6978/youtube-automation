@@ -1,19 +1,36 @@
 {
-  "topic": "【day03_run2】Shorts動画のテーマ（短くキャッチーに）",
-  "hook": "【day03_run2】3秒で引き込む一言（例: え、まだ〇〇してるの？）",
+  "topic": "Googleフォトで写真を自動バックアップする方法",
+  "hook": "スマホが壊れたら写真が全部消える、その前に見てください",
   "outline": [
     {
       "title": "フック・掴み（10秒）",
-      "keywords": ["英語キーワード1", "英語キーワード2"]
+      "keywords": [
+        "google photos",
+        "cloud storage backup"
+      ]
     },
     {
       "title": "本編・核心（35秒）",
-      "keywords": ["英語キーワード1", "英語キーワード2", "英語キーワード3"]
+      "keywords": [
+        "cloud backup",
+        "photo management",
+        "google photos",
+        "storage optimization",
+        "photo sharing"
+      ]
     },
     {
       "title": "CTA・締め（10秒）",
-      "keywords": ["motivation", "success"]
+      "keywords": [
+        "motivation",
+        "digital organization"
+      ]
     }
   ],
-  "search_keywords": ["英語キーワード1", "英語キーワード2", "英語キーワード3"]
+  "search_keywords": [
+    "google photos",
+    "cloud backup",
+    "photo storage",
+    "smartphone"
+  ]
 }

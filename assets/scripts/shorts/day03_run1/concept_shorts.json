@@ -1,19 +1,37 @@
 {
-  "topic": "【day03_run1】Shorts動画のテーマ（短くキャッチーに）",
-  "hook": "【day03_run1】3秒で引き込む一言（例: え、まだ〇〇してるの？）",
+  "topic": "スマホ依存を1週間で断ち切る設定",
+  "hook": "1日スマホを何時間見てるか知ってる？答えを聞いたら絶対驚く",
   "outline": [
     {
       "title": "フック・掴み（10秒）",
-      "keywords": ["英語キーワード1", "英語キーワード2"]
+      "keywords": [
+        "smartphone addiction",
+        "screen time"
+      ]
     },
     {
       "title": "本編・核心（35秒）",
-      "keywords": ["英語キーワード1", "英語キーワード2", "英語キーワード3"]
+      "keywords": [
+        "digital wellbeing",
+        "screen time settings",
+        "focus mode",
+        "phone notification",
+        "productivity"
+      ]
     },
     {
       "title": "CTA・締め（10秒）",
-      "keywords": ["motivation", "success"]
+      "keywords": [
+        "motivation",
+        "focus",
+        "productivity"
+      ]
     }
   ],
-  "search_keywords": ["英語キーワード1", "英語キーワード2", "英語キーワード3"]
+  "search_keywords": [
+    "screen time",
+    "smartphone",
+    "digital wellbeing",
+    "productivity"
+  ]
 }
