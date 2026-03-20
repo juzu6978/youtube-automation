@@ -3,8 +3,8 @@
 FFmpeg を使って動画クリップ・音声・字幕を合成し最終動画を生成する。
 
 出力:
-  {run_dir}/output.mp4   # 完成動画 (1080p, H.264, AAC, SRT字幕焼き込み)
-  {run_dir}/subtitles.srt
+  {run_dir}/output.mp4      # 完成動画 (1080p, H.264, AAC, ASS字幕焼き込み)
+  {run_dir}/subtitles.ass   # ASS字幕（左→右ワイプアニメーション付き）
 """
 
 import argparse
@@ -17,23 +17,68 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from scripts.utils import load_settings, get_run_dir
 
 
-def build_srt(timings: list[dict], output_path: Path):
-    """timings.json から SRT 字幕ファイルを生成する"""
-    lines = []
-    for i, t in enumerate(timings):
-        start = ms_to_srt_time(t["start_ms"])
-        end = ms_to_srt_time(t["end_ms"])
-        lines.append(f"{i+1}\n{start} --> {end}\n{t['text']}\n")
-    output_path.write_text("\n".join(lines), encoding="utf-8")
-
-
-def ms_to_srt_time(ms: int) -> str:
-    total_sec = ms // 1000
-    ms_part = ms % 1000
+def ms_to_ass_time(ms: int) -> str:
+    """ミリ秒 → ASS タイムコード (H:MM:SS.cc) に変換する"""
+    total_cs = ms // 10          # センチ秒
+    cs = total_cs % 100
+    total_sec = total_cs // 100
     h = total_sec // 3600
     m = (total_sec % 3600) // 60
     s = total_sec % 60
-    return f"{h:02d}:{m:02d}:{s:02d},{ms_part:03d}"
+    return f"{h}:{m:02d}:{s:02d}.{cs:02d}"
+
+
+def build_ass(timings: list[dict], output_path: Path,
+              sub_cfg: dict, global_sub: dict,
+              reveal_ms: int, width: int, height: int):
+    """
+    timings.json から ASS 字幕ファイルを生成する。
+    各行に左→右ワイプアニメーション（\\clip + \\t）を付与する。
+    """
+    font_name = global_sub.get("font_name", "Noto Sans CJK JP")
+    font_size = sub_cfg.get("font_size", 13)
+    # ASS カラー形式: &HAABBGGRR
+    primary = global_sub.get("primary_color", "&H00FFFFFF")
+    outline = global_sub.get("outline_color", "&H00000000")
+    border_style = global_sub.get("border_style", 1)
+    margin_v = sub_cfg.get("margin_v", 30)
+
+    header = (
+        "[Script Info]\n"
+        "ScriptType: v4.00+\n"
+        f"PlayResX: {width}\n"
+        f"PlayResY: {height}\n"
+        "ScaledBorderAndShadow: yes\n"
+        "\n"
+        "[V4+ Styles]\n"
+        "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, "
+        "OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, "
+        "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
+        "Alignment, MarginL, MarginR, MarginV, Encoding\n"
+        f"Style: Default,{font_name},{font_size},{primary},&H000000FF,"
+        f"{outline},&H00000000,0,0,0,0,100,100,0,0,"
+        f"{border_style},2,0,2,10,10,{margin_v},1\n"
+        "\n"
+        "[Events]\n"
+        "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
+    )
+
+    dialogue_lines = []
+    for t in timings:
+        start = ms_to_ass_time(t["start_ms"])
+        end = ms_to_ass_time(t["end_ms"])
+        text = t["text"].replace("\n", "\\N")
+        # 左→右ワイプ: 0幅クリップ → 全幅クリップに reveal_ms かけてアニメーション
+        anim = (
+            f"{{\\clip(0,0,0,{height})"
+            f"\\t({reveal_ms},\\clip(0,0,{width},{height}))}}"
+        )
+        dialogue_lines.append(
+            f"Dialogue: 0,{start},{end},Default,,0,0,0,,{anim}{text}"
+        )
+
+    output_path.write_text(header + "\n".join(dialogue_lines) + "\n",
+                           encoding="utf-8")
 
 
 def build_concat_list(clips: list[dict], narration_duration_ms: int,
@@ -102,12 +147,14 @@ def assemble_video(run_dir: Path, settings: dict, fmt: str = "landscape") -> Pat
     with open(timings_path, encoding="utf-8") as f:
         timings = json.load(f)
 
-    # 字幕ファイル生成
-    srt_path = run_dir / "subtitles.srt"
-    build_srt(timings, srt_path)
-
     # ナレーション尺を取得
     narration_ms = timings[-1]["end_ms"] if timings else 300000
+
+    # フォーマットごとの動画サイズ
+    if fmt in SHORT_FORMATS:
+        vid_width, vid_height = 1080, 1920
+    else:
+        vid_width, vid_height = 1920, 1080
 
     # Shorts/TikTok: target_duration_sec を超えないようにキャップ
     # YouTube Shorts は60秒以下が必須条件
@@ -117,6 +164,15 @@ def assemble_video(run_dir: Path, settings: dict, fmt: str = "landscape") -> Pat
         if narration_ms > max_ms:
             print(f"[05] ⚠️ ナレーション尺 {narration_ms/1000:.1f}s が Shorts 上限 {max_sec}s を超えています。{max_sec}s にカットします。")
             narration_ms = max_ms
+
+    # 字幕ファイル生成（ASS形式・左→右ワイプアニメーション付き）
+    ass_path = run_dir / "subtitles.ass"
+    reveal_ms = settings.get("subtitle", {}).get("reveal_ms", 600)
+    build_ass(timings, ass_path,
+              sub_cfg=settings["shorts"]["subtitle"] if fmt in SHORT_FORMATS else settings["subtitle"],
+              global_sub=settings["subtitle"],
+              reveal_ms=reveal_ms,
+              width=vid_width, height=vid_height)
 
     # concat リスト生成
     concat_path = build_concat_list(clips, narration_ms, timings, run_dir)
@@ -164,16 +220,10 @@ def assemble_video(run_dir: Path, settings: dict, fmt: str = "landscape") -> Pat
     output_path = run_dir / "output.mp4"
 
     if font_path.exists():
+        # ASS ファイルにスタイルが埋め込まれているので force_style 不要
         subtitle_filter = (
-            f"subtitles={srt_path}:"
-            f"fontsdir={font_path.parent}:"
-            f"force_style='"
-            f"Fontname={settings['subtitle']['font_name']},"
-            f"FontSize={sub_cfg['font_size']},"
-            f"PrimaryColour={settings['subtitle']['primary_color']},"
-            f"OutlineColour={settings['subtitle']['outline_color']},"
-            f"BorderStyle={settings['subtitle']['border_style']},"
-            f"MarginV={sub_cfg['margin_v']}'"
+            f"subtitles={ass_path}:"
+            f"fontsdir={font_path.parent}"
         )
     else:
         # フォントなし（字幕なし）でフォールバック
