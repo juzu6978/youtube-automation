@@ -37,10 +37,13 @@ def build_ass(timings: list[dict], output_path: Path,
     """
     font_name = global_sub.get("font_name", "Noto Sans CJK JP")
     font_size = sub_cfg.get("font_size", 13)
-    # ASS カラー形式: &HAABBGGRR
-    primary = global_sub.get("primary_color", "&H00FFFFFF")
-    outline = global_sub.get("outline_color", "&H00000000")
+    # ASS カラー形式: &H00BBGGRR（alpha=00 で不透明）
+    primary = global_sub.get("primary_color", "&H000066FF")   # オレンジ
+    outline = global_sub.get("outline_color", "&H00000000")   # 黒
     border_style = global_sub.get("border_style", 1)
+    bold = -1 if global_sub.get("bold", True) else 0          # -1=太字, 0=通常
+    outline_size = global_sub.get("outline_size", 3)
+    shadow_size = global_sub.get("shadow_size", 1)
     margin_v = sub_cfg.get("margin_v", 30)
 
     header = (
@@ -56,8 +59,8 @@ def build_ass(timings: list[dict], output_path: Path,
         "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
         "Alignment, MarginL, MarginR, MarginV, Encoding\n"
         f"Style: Default,{font_name},{font_size},{primary},&H000000FF,"
-        f"{outline},&H00000000,0,0,0,0,100,100,0,0,"
-        f"{border_style},2,0,2,10,10,{margin_v},1\n"
+        f"{outline},&H00000000,{bold},0,0,0,100,100,0,0,"
+        f"{border_style},{outline_size},{shadow_size},2,10,10,{margin_v},1\n"
         "\n"
         "[Events]\n"
         "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
