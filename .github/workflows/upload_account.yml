@@ -36,6 +36,11 @@ on:
         type: string
         default: "auto"
         description: "フォーマット指定: auto | landscape | shorts | tiktok（autoはaccount設定に従う）"
+      skip_eval:
+        required: false
+        type: boolean
+        default: false
+        description: "trueにするとスクリプト品質評価（02b）をスキップ（高速化）"
     secrets:
       YOUTUBE_REFRESH_TOKEN:
         required: true
@@ -134,6 +139,9 @@ jobs:
           fi
           if [ "${{ inputs.format }}" != "auto" ] && [ -n "${{ inputs.format }}" ]; then
             EXTRA_ARGS="$EXTRA_ARGS --format ${{ inputs.format }}"
+          fi
+          if [ "${{ inputs.skip_eval }}" = "true" ]; then
+            EXTRA_ARGS="$EXTRA_ARGS --skip-eval"
           fi
           python scripts/main.py \
             --account-id "${{ inputs.account_id }}" \

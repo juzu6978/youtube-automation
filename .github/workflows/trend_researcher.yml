@@ -1,0 +1,74 @@
+name: Weekly Trend Research
+
+on:
+  schedule:
+    - cron: "0 22 * * 0"   # 日曜 22:00 UTC = 月曜 07:00 JST（週の初めにキャッシュ更新）
+  workflow_dispatch:
+    inputs:
+      account_id:
+        description: "ジャンル設定の参照先アカウント"
+        default: "account_01"
+        type: string
+      no_websearch:
+        description: "web_search を使わずナレッジベースのみで生成"
+        type: boolean
+        default: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # trend_cache への commit に必要
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install anthropic pyyaml
+
+      - name: Run trend researcher
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          ACCOUNT_ID="${{ github.event.inputs.account_id || 'account_01' }}"
+          NO_WEBSEARCH="${{ github.event.inputs.no_websearch || 'false' }}"
+
+          ARGS="--account-id $ACCOUNT_ID"
+          if [ "$NO_WEBSEARCH" = "true" ]; then
+            ARGS="$ARGS --no-websearch"
+          fi
+
+          python scripts/00_trend_researcher.py $ARGS
+
+      - name: Show top trends
+        run: |
+          echo "📊 今週のバイラルトレンド TOP 5:"
+          python -c "
+          import json
+          data = json.load(open('assets/trend_cache/scored_topics.json'))
+          for i, t in enumerate(data['topics'][:5], 1):
+              print(f\"  {i}. [{t['viral_score']:.1f}] {t['title']}\")
+              print(f\"     → {t.get('trending_angle', '')}\")
+          "
+
+      - name: Commit trend cache
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add assets/trend_cache/scored_topics.json
+          if git diff --cached --quiet; then
+            echo "変更なし（スキップ）"
+          else
+            DATE=$(date '+%Y-%m-%d')
+            git commit -m "chore: weekly trend cache update ${DATE} [skip ci]"
+            git push
+            echo "✅ トレンドキャッシュをコミット・プッシュしました"
+          fi

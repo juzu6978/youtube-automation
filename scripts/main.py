@@ -25,11 +25,15 @@ from scripts.utils import load_settings, load_account_config, get_run_dir
 PIPELINE_STEPS = [
     ("01_concept_generator",  "トピック生成"),
     ("02_script_writer",      "原稿生成"),
+    ("02b_script_evaluator",  "スクリプト品質評価・改善"),
     ("03_tts_generator",      "TTS音声生成"),
     ("04_media_collector",    "動画素材収集"),
     ("05_video_assembler",    "動画合成"),
     ("06_thumbnail_creator",  "サムネイル生成"),
 ]
+
+# スクリプト評価をスキップする条件のステップ名
+EVAL_SKIP_IF_PRELOADED = {"01_concept_generator", "02_script_writer", "02b_script_evaluator"}
 
 SAMPLE_DIR = Path(__file__).parent.parent / "assets" / "sample"
 SCRIPTS_DIR = Path(__file__).parent.parent / "assets" / "scripts"
@@ -134,7 +138,8 @@ def copy_topic_data(run_dir: Path, fmt: str, topic: str):
 
 
 def run_pipeline(account_id: str, run_id: str, fmt: str,
-                 dry_run: bool = False, use_sample: bool = False, topic: str = ""):
+                 dry_run: bool = False, use_sample: bool = False,
+                 topic: str = "", skip_eval: bool = False):
     settings = load_settings()
     run_dir = get_run_dir(account_id, run_id, settings)
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -144,6 +149,8 @@ def run_pipeline(account_id: str, run_id: str, fmt: str,
     # コンテンツ提供モードを決定
     skip_content_gen = bool(topic) or use_sample
     content_mode = f"ライブラリ ({topic})" if topic else ("サンプル" if use_sample else "Claude API")
+    # 評価スキップ: 事前コンテンツ使用時 or --skip-eval 指定時
+    skip_eval_step = skip_content_gen or skip_eval
 
     print(f"\n{'='*60}")
     print(f"  YouTube Automation Pipeline")
@@ -168,9 +175,13 @@ def run_pipeline(account_id: str, run_id: str, fmt: str,
 
     try:
         for script_name, label in PIPELINE_STEPS:
-            # topic または use_sample の場合、ステップ01・02はスキップ
-            if skip_content_gen and script_name in ("01_concept_generator", "02_script_writer"):
+            # topic / use_sample の場合、01・02・02b はスキップ
+            if skip_content_gen and script_name in EVAL_SKIP_IF_PRELOADED:
                 print(f"\n[SKIP] {label}（{content_mode}モード）")
+                continue
+            # --skip-eval の場合、02b はスキップ
+            if skip_eval_step and script_name == "02b_script_evaluator":
+                print(f"\n[SKIP] {label}（--skip-eval）")
                 continue
             run_step(script_name, label, account_id, run_id, extra_args=extra_args)
 
@@ -219,6 +230,8 @@ def main():
                         help="フォーマット指定: landscape | shorts | tiktok（省略時はaccount設定に従う）")
     parser.add_argument("--topic", default="",
                         help="assets/scripts/{topic}/ のコンテンツを使用（Claude API不要）")
+    parser.add_argument("--skip-eval", action="store_true",
+                        help="スクリプト品質評価（02b）をスキップする")
     args = parser.parse_args()
 
     run_id_base = args.run_id or datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -234,7 +247,8 @@ def main():
         # フォーマットごとに独立した run_id（ディレクトリ）を使う
         run_id = f"{run_id_base}_{fmt}"
         run_pipeline(args.account_id, run_id, fmt,
-                     dry_run=args.dry_run, use_sample=args.use_sample, topic=args.topic)
+                     dry_run=args.dry_run, use_sample=args.use_sample,
+                     topic=args.topic, skip_eval=args.skip_eval)
 
 
 if __name__ == "__main__":
