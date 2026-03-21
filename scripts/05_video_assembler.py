@@ -71,11 +71,9 @@ def build_ass(timings: list[dict], output_path: Path,
         start = ms_to_ass_time(t["start_ms"])
         end = ms_to_ass_time(t["end_ms"])
         text = t["text"].replace("\n", "\\N")
-        # 左→右ワイプ: 0幅クリップ → 全幅クリップに reveal_ms かけてアニメーション
-        anim = (
-            f"{{\\clip(0,0,0,{height})"
-            f"\\t({reveal_ms},\\clip(0,0,{width},{height}))}}"
-        )
+        # フェードイン: reveal_ms かけて透明→不透明
+        # ※ libass は \clip の \t() アニメーションを未サポートのため \fad() を使用
+        anim = f"{{\\fad({reveal_ms},0)}}"
         dialogue_lines.append(
             f"Dialogue: 0,{start},{end},Default,,0,0,0,,{anim}{text}"
         )

@@ -20,7 +20,7 @@ subtitle:
   outline_size: 3             # アウトライン太さ（px）
   shadow_size: 1              # ドロップシャドウ（px）
   margin_v: 30                # 画面下端からのマージン（px）
-  reveal_ms: 600              # 左→右ワイプアニメーション展開時間(ms)
+  reveal_ms: 600              # フェードインアニメーション時間(ms)（libassは\clip\t()未サポートのため\fad使用）
 
 thumbnail:
   width: 1280
