@@ -17,7 +17,7 @@ video:
 
 subtitle:
   font_name: "Noto Sans CJK JP"
-  font_size: 13               # テキストサイズ
+  font_size: 65               # テキストサイズ（13×5）
   primary_color: "&H000066FF" # オレンジ文字 #FF6600（ASS形式: &H00BBGGRR）
   outline_color: "&H00000000" # 黒アウトライン
   border_style: 1             # 1=アウトライン＋シャドウ
@@ -80,7 +80,7 @@ shorts:
   transition_sec: 0.3        # Shortsは短めのトランジション
 
   subtitle:
-    font_size: 20             # 30→20（÷1.5）
+    font_size: 100            # 20×5
     margin_v: 120             # 下部UI（いいね・コメントボタン）と重ならない位置
 
   thumbnail:
