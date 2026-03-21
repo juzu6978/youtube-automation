@@ -5,10 +5,15 @@ video:
   resolution: "1920x1080"
   fps: 30
   codec: "libx264"
-  crf: 23             # 品質（低いほど高品質・大容量）
-  preset: "fast"      # エンコード速度（GitHub Actions向け）
+  profile: "high"     # H.264プロファイル（YouTube推奨）
+  crf: 18             # 23→18（高品質・visually lossless相当）
+  preset: "medium"    # fast→medium（CI許容範囲でより高品質）
+  pix_fmt: "yuv420p"  # YouTube互換ピクセルフォーマット
+  movflags: "faststart" # ストリーミング最適化（moovアトムを先頭に）
   audio_codec: "aac"
   audio_bitrate: "192k"
+  transition: "dissolve" # クリップ間トランジション: dissolve | fade | wipeleft | wiperight | none
+  transition_sec: 0.5    # トランジション時間（秒）
 
 subtitle:
   font_name: "Noto Sans CJK JP"
@@ -35,6 +40,9 @@ audio:
   narration_volume_db: 0.0
   fade_in_sec: 1.0
   fade_out_sec: 2.0
+  ducking_db: -10.0           # ナレーション中にBGMをさらに下げる量（dB）
+  ducking_attack_ms: 200      # ダッキング開始時間（ms）
+  ducking_release_ms: 500     # ダッキング解除時間（ms）
 
 tts:
   provider: "google_tts"      # デフォルトプロバイダー
@@ -61,10 +69,15 @@ shorts:
   fps: 30
   target_duration_sec: 55    # 60秒未満（YouTube Shortsの条件）
   codec: "libx264"
-  crf: 23
-  preset: "fast"
+  profile: "high"
+  crf: 18
+  preset: "medium"
+  pix_fmt: "yuv420p"
+  movflags: "faststart"
   audio_codec: "aac"
   audio_bitrate: "192k"
+  transition: "dissolve"     # Shorts用トランジション
+  transition_sec: 0.3        # Shortsは短めのトランジション
 
   subtitle:
     font_size: 20             # 30→20（÷1.5）

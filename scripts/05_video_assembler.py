@@ -2,9 +2,14 @@
 05_video_assembler.py
 FFmpeg を使って動画クリップ・音声・字幕を合成し最終動画を生成する。
 
+改善点（GitHub参考プロジェクトより取り込み）:
+  - CRF 18 + profile:v high + yuv420p + faststart（YouTube最適化エンコード）
+  - xfade によるクリップ間トランジション（dissolve / fade / wipeleft 等）
+  - BGM ダッキング（ナレーション中に BGM を自動で下げる）
+
 出力:
-  {run_dir}/output.mp4      # 完成動画 (1080p, H.264, AAC, ASS字幕焼き込み)
-  {run_dir}/subtitles.ass   # ASS字幕（左→右ワイプアニメーション付き）
+  {run_dir}/output.mp4      # 完成動画 (H.264 CRF18, AAC, ASS字幕焼き込み)
+  {run_dir}/subtitles.ass   # ASS字幕（フェードインアニメーション付き）
 """
 
 import argparse
@@ -17,9 +22,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from scripts.utils import load_settings, get_run_dir
 
 
+# ─────────────────────────────────────────────
+# 字幕
+# ─────────────────────────────────────────────
+
 def ms_to_ass_time(ms: int) -> str:
     """ミリ秒 → ASS タイムコード (H:MM:SS.cc) に変換する"""
-    total_cs = ms // 10          # センチ秒
+    total_cs = ms // 10
     cs = total_cs % 100
     total_sec = total_cs // 100
     h = total_sec // 3600
@@ -33,18 +42,18 @@ def build_ass(timings: list[dict], output_path: Path,
               reveal_ms: int, width: int, height: int):
     """
     timings.json から ASS 字幕ファイルを生成する。
-    各行に左→右ワイプアニメーション（\\clip + \\t）を付与する。
+    \fad() でフェードインアニメーションを付与する。
+    （libass は \clip の \t() アニメーションを未サポートのため \fad を使用）
     """
-    font_name = global_sub.get("font_name", "Noto Sans CJK JP")
-    font_size = sub_cfg.get("font_size", 13)
-    # ASS カラー形式: &H00BBGGRR（alpha=00 で不透明）
-    primary = global_sub.get("primary_color", "&H000066FF")   # オレンジ
-    outline = global_sub.get("outline_color", "&H00000000")   # 黒
+    font_name    = global_sub.get("font_name", "Noto Sans CJK JP")
+    font_size    = sub_cfg.get("font_size", 13)
+    primary      = global_sub.get("primary_color", "&H000066FF")  # オレンジ
+    outline      = global_sub.get("outline_color", "&H00000000")  # 黒
     border_style = global_sub.get("border_style", 1)
-    bold = -1 if global_sub.get("bold", True) else 0          # -1=太字, 0=通常
+    bold         = -1 if global_sub.get("bold", True) else 0
     outline_size = global_sub.get("outline_size", 3)
-    shadow_size = global_sub.get("shadow_size", 1)
-    margin_v = sub_cfg.get("margin_v", 30)
+    shadow_size  = global_sub.get("shadow_size", 1)
+    margin_v     = sub_cfg.get("margin_v", 30)
 
     header = (
         "[Script Info]\n"
@@ -69,11 +78,9 @@ def build_ass(timings: list[dict], output_path: Path,
     dialogue_lines = []
     for t in timings:
         start = ms_to_ass_time(t["start_ms"])
-        end = ms_to_ass_time(t["end_ms"])
-        text = t["text"].replace("\n", "\\N")
-        # フェードイン: reveal_ms かけて透明→不透明
-        # ※ libass は \clip の \t() アニメーションを未サポートのため \fad() を使用
-        anim = f"{{\\fad({reveal_ms},0)}}"
+        end   = ms_to_ass_time(t["end_ms"])
+        text  = t["text"].replace("\n", "\\N")
+        anim  = f"{{\\fad({reveal_ms},0)}}"
         dialogue_lines.append(
             f"Dialogue: 0,{start},{end},Default,,0,0,0,,{anim}{text}"
         )
@@ -82,13 +89,17 @@ def build_ass(timings: list[dict], output_path: Path,
                            encoding="utf-8")
 
 
-def build_concat_list(clips: list[dict], narration_duration_ms: int,
-                      timings: list[dict], run_dir: Path) -> Path:
+# ─────────────────────────────────────────────
+# クリップ選択
+# ─────────────────────────────────────────────
+
+def select_clips(clips: list[dict], narration_duration_ms: int,
+                 timings: list[dict]) -> list[dict]:
     """
-    ナレーション尺に合わせてクリップを並べた concat リストを作成する。
-    各セクションの字幕タイミングに合わせてクリップを割り振る。
+    ナレーション尺を埋めるクリップリストを返す。
+    各要素は {"path": str, "duration": float} の dict。
     """
-    total_duration_sec = narration_duration_ms / 1000
+    total_sec = narration_duration_ms / 1000
 
     # セクションごとのクリップをマッピング
     section_clips: dict[str, list] = {}
@@ -96,178 +107,335 @@ def build_concat_list(clips: list[dict], narration_duration_ms: int,
         sec = clip.get("section", "")
         section_clips.setdefault(sec, []).append(clip)
 
-    # タイミングからセクション境界を計算
-    section_order = []
-    seen = set()
+    # タイミングからセクション順序を取得
+    section_order: list[str] = []
+    seen: set[str] = set()
     for t in timings:
         sec = t.get("section", "")
         if sec and sec not in seen:
             section_order.append(sec)
             seen.add(sec)
 
-    # セクションごとの継続時間を均等割り
-    if section_order:
-        sec_duration = total_duration_sec / len(section_order)
-    else:
-        sec_duration = total_duration_sec
+    sec_duration = total_sec / len(section_order) if section_order else total_sec
 
-    concat_path = run_dir / "concat.txt"
-    clip_entries = []
+    ordered: list[dict] = []
     accumulated = 0.0
 
     for sec in section_order:
         available = section_clips.get(sec, []) or list(clips)
-        # ラウンドロビンでクリップを選択
         idx = 0
-        while accumulated < total_duration_sec and (accumulated < (section_order.index(sec) + 1) * sec_duration or sec == section_order[-1]):
+        sec_end = (section_order.index(sec) + 1) * sec_duration
+        while accumulated < total_sec and (accumulated < sec_end or sec == section_order[-1]):
             clip = available[idx % len(available)]
-            clip_duration = clip["duration"]
-            clip_entries.append(clip["local_path"])
-            accumulated += clip_duration
+            ordered.append({"path": clip["local_path"],
+                            "duration": float(clip["duration"])})
+            accumulated += clip["duration"]
             idx += 1
-            if accumulated >= total_duration_sec:
+            if accumulated >= total_sec:
                 break
 
-    with open(concat_path, "w") as f:
-        for path in clip_entries:
-            f.write(f"file '{path}'\n")
+    return ordered
 
-    return concat_path
 
+# ─────────────────────────────────────────────
+# ベース動画生成（トランジション対応）
+# ─────────────────────────────────────────────
+
+def build_base_video(ordered_clips: list[dict], narration_sec: float,
+                     scale_filter: str, video_cfg: dict,
+                     run_dir: Path) -> Path:
+    """
+    クリップリストからベース動画を生成する。
+    video_cfg に transition が設定されていれば xfade を適用する。
+
+    参考: addy-47/youtube-shorts-automation, scriptituk/xfade-easing
+    """
+    output = run_dir / "base_video.mp4"
+    transition     = video_cfg.get("transition", "none")
+    transition_sec = float(video_cfg.get("transition_sec", 0.5))
+
+    quality_flags = [
+        "-c:v", video_cfg["codec"],
+        "-profile:v", video_cfg.get("profile", "high"),
+        "-preset", video_cfg["preset"],
+        "-crf", str(video_cfg["crf"]),
+        "-pix_fmt", video_cfg.get("pix_fmt", "yuv420p"),
+    ]
+
+    use_xfade = (
+        transition and transition != "none"
+        and len(ordered_clips) >= 2
+        and all(c["duration"] > transition_sec for c in ordered_clips)
+    )
+
+    if not use_xfade:
+        # ─ シンプル concat（フォールバック）─
+        concat_path = run_dir / "concat.txt"
+        with open(concat_path, "w") as f:
+            for c in ordered_clips:
+                f.write(f"file '{c['path']}'\n")
+        cmd = (
+            ["ffmpeg", "-y",
+             "-f", "concat", "-safe", "0",
+             "-i", str(concat_path),
+             "-t", str(narration_sec),
+             "-vf", scale_filter,
+             "-r", str(video_cfg["fps"])]
+            + quality_flags
+            + ["-an", str(output)]
+        )
+        subprocess.run(cmd, check=True, capture_output=True)
+
+    else:
+        # ─ xfade トランジション ─
+        # filter_complex で各クリップをスケール後、順次 xfade でつなぐ
+        # 参考: https://trac.ffmpeg.org/wiki/Xfade
+        input_args: list[str] = []
+        for c in ordered_clips:
+            input_args += ["-i", c["path"]]
+
+        n = len(ordered_clips)
+        filter_parts: list[str] = []
+
+        # 各入力をスケール＋フォーマット変換
+        for i in range(n):
+            filter_parts.append(
+                f"[{i}:v]{scale_filter},fps={video_cfg['fps']},format=yuv420p[sv{i}]"
+            )
+
+        # xfade チェーン: offset = 各クリップの開始時刻 - transition_sec
+        offset = max(0.0, ordered_clips[0]["duration"] - transition_sec)
+        if n == 2:
+            filter_parts.append(
+                f"[sv0][sv1]xfade=transition={transition}"
+                f":duration={transition_sec}:offset={offset:.3f}[vout]"
+            )
+        else:
+            filter_parts.append(
+                f"[sv0][sv1]xfade=transition={transition}"
+                f":duration={transition_sec}:offset={offset:.3f}[vx1]"
+            )
+            for i in range(2, n):
+                offset += max(0.0, ordered_clips[i - 1]["duration"] - transition_sec)
+                prev = f"vx{i - 1}"
+                out  = "vout" if i == n - 1 else f"vx{i}"
+                filter_parts.append(
+                    f"[{prev}][sv{i}]xfade=transition={transition}"
+                    f":duration={transition_sec}:offset={offset:.3f}[{out}]"
+                )
+
+        filter_complex = ";".join(filter_parts)
+        cmd = (
+            ["ffmpeg", "-y"]
+            + input_args
+            + ["-filter_complex", filter_complex,
+               "-map", "[vout]",
+               "-t", str(narration_sec)]
+            + quality_flags
+            + ["-an", str(output)]
+        )
+        subprocess.run(cmd, check=True, capture_output=True)
+        print(f"[05] xfade トランジション適用: {transition} ({transition_sec}s × {n - 1}箇所)")
+
+    return output
+
+
+# ─────────────────────────────────────────────
+# BGM ダッキング
+# ─────────────────────────────────────────────
+
+def build_audio_mix(narration_path: Path, bgm_path: Path | None,
+                    total_sec: float, audio_cfg: dict,
+                    run_dir: Path) -> Path:
+    """
+    ナレーション + BGM をミックスする。
+    BGM がある場合はダッキング（ナレーション中に BGM を自動で下げる）を適用する。
+
+    参考: SimpelMe/ffmpeg-leveler, slhck/ffmpeg-normalize
+    """
+    output = run_dir / "mixed_audio.aac"
+
+    if bgm_path is None or not bgm_path.exists():
+        # BGM なし: ナレーションをそのままコピー
+        return narration_path
+
+    bgm_vol     = audio_cfg.get("bgm_volume_db", -18.0)
+    duck_db     = audio_cfg.get("ducking_db", -10.0)
+    attack_ms   = audio_cfg.get("ducking_attack_ms", 200)
+    release_ms  = audio_cfg.get("ducking_release_ms", 500)
+    fade_out    = audio_cfg.get("fade_out_sec", 2.0)
+
+    # BGM をループ + 音量調整 + フェードアウト + ダッキング
+    # sidechaincompress でナレーション音量に連動して BGM を自動圧縮
+    filter_complex = (
+        # BGM: ループ → 音量 → フェードアウト
+        f"[1:a]aloop=loop=-1:size=2e+09,volume={bgm_vol}dB,"
+        f"afade=t=out:st={max(0, total_sec - fade_out):.2f}:d={fade_out}[bgm_base];"
+        # ナレーションをサイドチェーン信号として BGM を圧縮（ダッキング）
+        f"[0:a][bgm_base]sidechaincompress="
+        f"threshold=0.01:ratio=4:attack={attack_ms}:release={release_ms}:"
+        f"makeup={abs(duck_db) * 0.3:.1f}[bgm_duck];"
+        # ナレーション + ダッキング済み BGM をミックス
+        f"[0:a][bgm_duck]amix=inputs=2:duration=first[aout]"
+    )
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", str(narration_path),
+        "-i", str(bgm_path),
+        "-filter_complex", filter_complex,
+        "-map", "[aout]",
+        "-c:a", "aac",
+        "-b:a", "192k",
+        "-t", str(total_sec),
+        str(output),
+    ]
+    result = subprocess.run(cmd, capture_output=True)
+    if result.returncode != 0:
+        print("[05] 警告: BGMダッキングに失敗しました。ナレーションのみで続行します。")
+        print(result.stderr.decode(errors="replace")[-500:])
+        return narration_path
+
+    print(f"[05] BGMダッキング適用: {bgm_path.name} (BGM {bgm_vol}dB, ダッキング {duck_db}dB)")
+    return output
+
+
+# ─────────────────────────────────────────────
+# メイン合成
+# ─────────────────────────────────────────────
 
 SHORT_FORMATS = ("shorts", "tiktok")
 
 
 def assemble_video(run_dir: Path, settings: dict, fmt: str = "landscape") -> Path:
-    narration_path = run_dir / "narration.mp3"
-    clips_meta_path = run_dir / "clips.json"
-    timings_path = run_dir / "timings.json"
+    narration_path   = run_dir / "narration.mp3"
+    clips_meta_path  = run_dir / "clips.json"
+    timings_path     = run_dir / "timings.json"
 
     with open(clips_meta_path, encoding="utf-8") as f:
         clips = json.load(f)
     with open(timings_path, encoding="utf-8") as f:
         timings = json.load(f)
 
-    # ナレーション尺を取得
     narration_ms = timings[-1]["end_ms"] if timings else 300000
 
     # フォーマットごとの動画サイズ
     if fmt in SHORT_FORMATS:
         vid_width, vid_height = 1080, 1920
+        video_cfg = settings["shorts"]
     else:
         vid_width, vid_height = 1920, 1080
+        video_cfg = settings["video"]
 
-    # Shorts/TikTok: target_duration_sec を超えないようにキャップ
-    # YouTube Shorts は60秒以下が必須条件
+    # Shorts: target_duration_sec でキャップ
     if fmt in SHORT_FORMATS:
-        max_sec = settings["shorts"].get("target_duration_sec", 55)
-        max_ms = max_sec * 1000
+        max_ms = settings["shorts"].get("target_duration_sec", 55) * 1000
         if narration_ms > max_ms:
-            print(f"[05] ⚠️ ナレーション尺 {narration_ms/1000:.1f}s が Shorts 上限 {max_sec}s を超えています。{max_sec}s にカットします。")
+            print(f"[05] ⚠️ ナレーション {narration_ms/1000:.1f}s → Shorts上限 {max_ms/1000:.0f}s にカット")
             narration_ms = max_ms
 
-    # 字幕ファイル生成（ASS形式・左→右ワイプアニメーション付き）
-    ass_path = run_dir / "subtitles.ass"
-    reveal_ms = settings.get("subtitle", {}).get("reveal_ms", 600)
+    narration_sec = narration_ms / 1000
+
+    # ── 字幕（ASS）生成 ──
+    ass_path   = run_dir / "subtitles.ass"
+    reveal_ms  = settings.get("subtitle", {}).get("reveal_ms", 600)
+    sub_cfg    = settings["shorts"]["subtitle"] if fmt in SHORT_FORMATS else settings["subtitle"]
     build_ass(timings, ass_path,
-              sub_cfg=settings["shorts"]["subtitle"] if fmt in SHORT_FORMATS else settings["subtitle"],
+              sub_cfg=sub_cfg,
               global_sub=settings["subtitle"],
               reveal_ms=reveal_ms,
               width=vid_width, height=vid_height)
 
-    # concat リスト生成
-    concat_path = build_concat_list(clips, narration_ms, timings, run_dir)
+    # ── クリップ選択 ──
+    ordered_clips = select_clips(clips, narration_ms, timings)
 
-    # フォントファイルのパス
-    font_path = Path("assets/fonts/NotoSansCJK-Regular.ttc")
-    if not font_path.exists():
-        # CI環境では日本語フォントをシステムから探す
-        font_path = Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc")
-
-    # フォーマットに応じた設定を選択
+    # ── スケールフィルタ ──
     if fmt in SHORT_FORMATS:
-        video_cfg = settings["shorts"]
-        sub_cfg = settings["shorts"]["subtitle"]
-        # 縦型(9:16): 横動画を中央クロップして縦にする
         scale_filter = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920"
         resolution_label = "1080x1920 (縦型)"
     else:
-        video_cfg = settings["video"]
-        sub_cfg = settings["subtitle"]
         scale_filter = f"scale={video_cfg['resolution'].replace('x', ':')}"
         resolution_label = video_cfg["resolution"]
 
     print(f"[05] 解像度: {resolution_label}")
 
-    # Step 1: クリップを連結してベース動画を生成
-    base_video = run_dir / "base_video.mp4"
-    concat_cmd = [
-        "ffmpeg", "-y",
-        "-f", "concat", "-safe", "0",
-        "-i", str(concat_path),
-        "-t", str(narration_ms / 1000),
-        "-vf", scale_filter,
-        "-r", str(video_cfg["fps"]),
-        "-c:v", video_cfg["codec"],
-        "-preset", video_cfg["preset"],
-        "-crf", str(video_cfg["crf"]),
-        "-an",  # 音声なし（後でミックス）
-        str(base_video),
-    ]
-    print(f"[05] ベース動画生成中...")
-    subprocess.run(concat_cmd, check=True, capture_output=True)
+    # ── ベース動画生成（xfadeトランジション付き）──
+    base_video = build_base_video(
+        ordered_clips, narration_sec, scale_filter, video_cfg, run_dir
+    )
 
-    # Step 2: 字幕焼き込み + 音声ミックス → 最終動画
-    output_path = run_dir / "output.mp4"
+    # ── BGM ミックス（ダッキング）──
+    bgm_dir  = Path("assets/bgm")
+    bgm_path = next(bgm_dir.glob("*.mp3"), None) if bgm_dir.exists() else None
+    audio_input = build_audio_mix(
+        narration_path, bgm_path, narration_sec,
+        settings.get("audio", {}), run_dir
+    )
+
+    # ── フォント ──
+    font_path = Path("assets/fonts/NotoSansCJK-Regular.ttc")
+    if not font_path.exists():
+        font_path = Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc")
 
     if font_path.exists():
-        # ASS ファイルにスタイルが埋め込まれているので force_style 不要
         subtitle_filter = (
             f"subtitles={ass_path}:"
             f"fontsdir={font_path.parent}"
         )
     else:
-        # フォントなし（字幕なし）でフォールバック
         print("[05] 警告: 日本語フォントが見つかりません。字幕なしで続行します。")
         subtitle_filter = None
 
-    vf_filter = subtitle_filter if subtitle_filter else "null"
-
-    final_cmd = [
-        "ffmpeg", "-y",
-        "-i", str(base_video),
-        "-i", str(narration_path),
-        "-vf", vf_filter,
+    # ── 最終合成（字幕焼き込み + 音声ミックス）──
+    output_path = run_dir / "output.mp4"
+    quality_flags = [
         "-c:v", video_cfg["codec"],
+        "-profile:v", video_cfg.get("profile", "high"),
         "-preset", video_cfg["preset"],
         "-crf", str(video_cfg["crf"]),
+        "-pix_fmt", video_cfg.get("pix_fmt", "yuv420p"),
+        "-movflags", f"+{video_cfg.get('movflags', 'faststart')}",
         "-r", str(video_cfg["fps"]),
         "-c:a", video_cfg["audio_codec"],
         "-b:a", video_cfg["audio_bitrate"],
-        "-shortest",
-        str(output_path),
     ]
-    print(f"[05] 字幕・音声ミックス中...")
+
+    final_cmd = (
+        ["ffmpeg", "-y",
+         "-i", str(base_video),
+         "-i", str(audio_input),
+         "-vf", subtitle_filter if subtitle_filter else "null"]
+        + quality_flags
+        + ["-shortest", str(output_path)]
+    )
+
+    print("[05] 字幕・音声ミックス中...")
     subprocess.run(final_cmd, check=True, capture_output=True)
 
-    # ベース動画を削除
     base_video.unlink(missing_ok=True)
+    # ダッキング後の一時ファイルを削除
+    mixed = run_dir / "mixed_audio.aac"
+    mixed.unlink(missing_ok=True)
 
     size_mb = output_path.stat().st_size / 1024 / 1024
     print(f"[05] 動画合成完了: {output_path} ({size_mb:.1f} MB)")
     return output_path
 
 
+# ─────────────────────────────────────────────
+# CLI
+# ─────────────────────────────────────────────
+
 def main():
     parser = argparse.ArgumentParser(description="動画・音声・字幕を合成する")
     parser.add_argument("--account-id", required=True)
-    parser.add_argument("--run-id", required=True)
-    parser.add_argument("--format", default="landscape",
+    parser.add_argument("--run-id",     required=True)
+    parser.add_argument("--format",     default="landscape",
                         help="フォーマット: landscape | shorts | tiktok")
     args = parser.parse_args()
 
     settings = load_settings()
-    run_dir = get_run_dir(args.account_id, args.run_id, settings)
+    run_dir  = get_run_dir(args.account_id, args.run_id, settings)
     assemble_video(run_dir, settings, fmt=args.format)
 
 
