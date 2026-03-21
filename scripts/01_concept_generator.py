@@ -110,21 +110,22 @@ def generate_concept(genre_cfg: dict, run_dir: Path,
 
 {trend_section}
 
-【縦型ショート動画（55秒）で爆発的に再生される法則】
-✓ 最初3秒で全て決まる：「え、まじ？」「知らなかった...」と言わせる衝撃の一言
-✓ テンポが命：1センテンス2〜3秒、テンポよく畳み掛ける
-✓ 好奇心ギャップ：「〜って知ってた？」「実は〜なんです」
-✓ 25文字以内のタイトル：短く・インパクト重視
+【縦型ショート動画（38秒・最適尺）で爆発的に再生される法則】
+✓ バイラル動画の平均は30.8秒。38秒がスイートスポット（完了率が最大化）
+✓ 最初3秒：「え？」「まじで？」の3要素フック（視覚+テキスト+音声）
+✓ 遅延ペイオフ：謎を提示→焦らす→最後に回収（Zeigarnik効果）
+✓ ループ構造：末尾が冒頭に自然に戻ると1ループ=1再生カウント
 
-良いショートタイトル例:
-- 「ChatGPTの使い方、99%が知らない」
-- 「スマホ充電、やってはいけない方法」
-- 「人を動かす心理学の裏技3選」
+良いショートタイトル例（絵文字+4〜6語）:
+- 「😮 ChatGPTの使い方、99%が知らない」
+- 「⚡ 人を動かす心理の裏技3選」
+- 「🧠 試食したら買う心理の正体」
 
-【重要】hook は3パターン必ず生成すること:
-  - hook_shock    : 「え？」「まじで？」と思わせる衝撃の事実（脳を刺す）
-  - hook_curiosity: 「なぜ〜なのか？」「実は〜」謎かけ型（好奇心を刺激）
-  - hook_empathy  : 「〜したことありませんか？」「あなたも〜」共感型（自分事化）
+【重要】hook は3パターン + ループCTAヒントを必ず生成:
+  - hook_shock    : 衝撃の事実・逆説・矛盾（「え？」と声が出るレベル）
+  - hook_curiosity: 謎かけ・問い（「なぜ〜なのか？」「実は〜」）
+  - hook_empathy  : 日常体験・共感（「〜したことありませんか？」）
+  - loop_cta_hint : 末尾で冒頭フックに戻るCTAのヒント
 
 【出力形式】必ず以下のJSONのみを返してください（マークダウン不要）:
 {{
@@ -134,10 +135,11 @@ def generate_concept(genre_cfg: dict, run_dir: Path,
   "hook_empathy": "共感型フック（20文字以内）",
   "best_hook_type": "shock | curiosity | empathy （最も強力なものを選ぶ）",
   "best_hook_reason": "このフックを選んだ理由（30文字以内）",
+  "loop_cta_hint": "末尾で冒頭に自然に戻るCTAのヒント（例: 最初から聞いてみて）",
   "outline": [
-    {{"title": "フック・掴み（10秒）", "keywords": ["英語kw1", "英語kw2"]}},
-    {{"title": "本編・核心（35秒）", "keywords": ["英語kw1", "英語kw2"]}},
-    {{"title": "CTA・締め（10秒）", "keywords": ["motivation", "success"]}}
+    {{"title": "フック・掴み（8秒）", "keywords": ["英語kw1", "英語kw2"]}},
+    {{"title": "本編・核心（27秒）", "keywords": ["英語kw1", "英語kw2"]}},
+    {{"title": "CTA・締め（3秒）", "keywords": ["motivation", "success"]}}
   ],
   "search_keywords": ["英語kw1", "英語kw2", "英語kw3"],
   "viral_score": 8.5,
@@ -146,7 +148,7 @@ def generate_concept(genre_cfg: dict, run_dir: Path,
 
 注意:
 - keywordsはPexels動画検索用なので必ず英語で
-- outlineは必ず3セクション（フック/本編/CTA）
+- outlineは必ず3セクション（フック8秒/本編27秒/CTA3秒）合計38秒
 - topicは25文字以内の短くてインパクトのあるタイトル
 - {f"トレンドデータを最大限に活用し、viral_scoreが高いトピックを選ぶこと" if has_trend else "トレンド性の高いトピックを独自に考案すること"}"""
 
@@ -236,6 +238,7 @@ def generate_concept(genre_cfg: dict, run_dir: Path,
         "hook_alternatives": hook_map,      # 他の候補（参考用）
         "hook_type": hook_type,
         "hook_reason": data.get("best_hook_reason", ""),
+        "loop_cta_hint": data.get("loop_cta_hint", ""),   # ループCTAヒント
         "outline":  data["outline"],
         "search_keywords": data["search_keywords"],
         "viral_score": data.get("viral_score", 0.0),

@@ -3,11 +3,11 @@
 生成されたナレーション原稿の品質を Claude API で評価し、基準を下回る場合は改善する。
 
 評価軸（各20点・合計100点）:
-  1. フック強度   : 最初の1文で「え？」と思わせるか
-  2. 好奇心ギャップ: 「続きが気になる」構造になっているか
-  3. テンポ       : 1文15文字以内・言い切り形が多いか（Shorts）
-  4. 感情トリガー  : 驚き・共感・不安・笑い のいずれかがあるか
-  5. 具体性       : 数字・固有名詞・実体験エピソードが含まれるか
+  1. フック強度      : 最初1〜2文で「え？まじで？」と思わせるか（3要素フック）
+  2. 遅延ペイオフ構造 : 謎かけ→焦らし→回収 の構造があるか（Zeigarnik効果）
+  3. ループ・テンポ   : ループ構造があり1文12〜15文字以内か
+  4. 感情トリガー     : 驚き・共感・不安・笑い のいずれかが発動しているか
+  5. CTA・具体性     : コミュニティ型CTA + 数字・固有名詞・エピソードの豊富さ
 
 75点未満の場合は詳細フィードバック付きで原稿を再生成する（最大3回）。
 
@@ -52,63 +52,85 @@ def evaluate_script(script: dict, concept: dict, fmt: str,
           "pass": True
         }
     """
+    is_shorts = fmt in SHORT_FORMATS
     sentences_preview = "\n".join(
-        f"  [{s['index']}] {s['text']}" for s in script["sentences"][:10]
+        f"  [{s['index']}] {s['text']}" for s in script["sentences"][:12]
+    )
+    last_sentences = "\n".join(
+        f"  [{s['index']}] {s['text']}" for s in script["sentences"][-3:]
     )
     all_text = " ".join(s["text"] for s in script["sentences"])
-    fmt_label = "ショート動画（55秒）" if fmt in SHORT_FORMATS else "横型動画（5〜8分）"
+    total_chars = sum(len(s["text"]) for s in script["sentences"])
+    fmt_label = f"ショート動画（目標38秒≒190文字 / 現在{total_chars}文字）" if is_shorts else "横型動画（5〜8分）"
 
-    prompt = f"""あなたはYouTubeバイラルコンテンツの専門評価者です。
-以下のナレーション原稿を厳しく・公正に評価してください。
+    loop_check = (
+        "【ループ確認】冒頭フックと末尾CTAを見比べて、末尾が冒頭に自然に繋がるか判定してください。"
+        if is_shorts else ""
+    )
+
+    prompt = f"""あなたはYouTube Shortsバイラルコンテンツの専門評価者です。
+最新の研究データ（完了率・ループ率・コメント率がアルゴリズムの主要シグナル）に基づき、
+以下の原稿を厳しく・公正に評価してください。
 
 【動画フォーマット】{fmt_label}
 【トピック】{concept.get('topic', '')}
 【採用フック】{concept.get('hook', '')}
 
-【原稿（先頭10文）】
+【冒頭12文】
 {sentences_preview}
-...（全{len(script['sentences'])}文）
 
-【全文の流れ】
-{all_text[:500]}...
+【末尾3文（ループ確認用）】
+{last_sentences}
 
+{loop_check}
+
+【全文テキスト（参考）】
+{all_text[:600]}...
+
+━━━━━━━━━━━━━━━━━━━━━━━
 【評価基準（各20点・合計100点）】
+━━━━━━━━━━━━━━━━━━━━━━━
 
 1. フック強度（0〜20点）
-   - 20点: 最初の1文で「え？まじで？」と思わせる衝撃がある
-   - 15点: 興味を引くが衝撃は弱い
-   - 10点以下: フックが弱く離脱されやすい
+   視聴者がスクロールを止める「3秒の壁」を越えられるか。
+   - 20点: 冒頭1〜2文に「衝撃の事実」「矛盾」「損失回避」の心理トリガーがある
+   - 15点: 興味は引くが衝撃・矛盾感が弱い
+   - 10点以下: 「こんにちは」「今日は〜について話します」型の致命的な出だし
 
-2. 好奇心ギャップ（0〜20点）
-   - 20点: 「続きが気になる」「なぜ？」という謎かけ構造がある
-   - 15点: 一定の引力はあるが弱い
-   - 10点以下: 情報を並べているだけで引力がない
+2. 遅延ペイオフ構造（0〜20点）
+   答えを最後まで引き伸ばし、Zeigarnik効果（未完への執着）を発動させているか。
+   - 20点: フックで謎を提示→本編で焦らす→末尾で回収 の構造が明確
+   - 15点: 焦らしはあるが弱い（すぐに答えを言っている）
+   - 10点以下: 冒頭から情報を全部与えてしまっている
 
-3. テンポ・読みやすさ（0〜20点）
-   （Shorts: 1文15文字以内・言い切り形、Long: リズムよく橋渡しがある）
-   - 20点: テンポが抜群で引き込まれる
-   - 15点: 概ね良いが一部もたつく
-   - 10点以下: 長文・回りくどい表現が多い
+3. ループ・テンポ（0〜20点）
+   {'ループ構造（末尾→冒頭への接続）と文の短さ・テンポを評価。' if is_shorts else '視聴維持のリズム・橋渡し表現・パターン中断を評価。'}
+   - 20点: {'末尾が冒頭フックに自然に戻る構造。全文12〜15文字以内。' if is_shorts else 'セクション間の橋渡し・パターン中断が効いて飽きない。'}
+   - 15点: {'ループ構造が弱い、または長文が混在。' if is_shorts else '橋渡しはあるが機械的で自然でない。'}
+   - 10点以下: {'ループ構造なし、長文が多い。' if is_shorts else '単調な情報羅列。'}
 
 4. 感情トリガー（0〜20点）
-   - 20点: 驚き・共感・不安・笑い のいずれかが強く発動している
-   - 15点: 感情への訴えかけは一定あるが弱い
-   - 10点以下: 感情的な引っかかりがほぼない
+   驚き・共感・不安・笑い のいずれかが意図的に配置されているか。
+   「役立つだけ」の動画はアルゴリズムに押されない。
+   - 20点: 明確な感情スパイクが1箇所以上ある（「えっ！」と声が出るレベル）
+   - 15点: 感情への訴えかけはあるが弱い
+   - 10点以下: 終始フラットで感情的引っかかりがない
 
-5. 具体性・信頼性（0〜20点）
-   - 20点: 数字・研究名・実体験エピソード・固有名詞が豊富
-   - 15点: 一部具体的だが抽象表現が多い
-   - 10点以下: 具体性がほぼなく「〜が大切です」で終わっている
+5. CTA・具体性（0〜20点）
+   コミュニティ型CTAと具体的な数字・固有名詞・エピソードの組み合わせ。
+   - 20点: 「〇〇か△△か、コメントで教えて」型の参加型CTA + 数字・研究名が豊富
+   - 15点: CTAはあるが受動的「登録お願いします」。具体性は一定あり。
+   - 10点以下: CTAなし or 抽象的「大切にしましょう」ばかり
 
 【出力形式】必ず以下のJSONのみを返してください（マークダウン不要）:
 {{
   "total": 75,
   "axes": {{
     "hook": 15,
-    "curiosity": 14,
-    "tempo": 16,
+    "payoff": 14,
+    "loop_tempo": 16,
     "emotion": 15,
-    "specificity": 15
+    "cta_specificity": 15
   }},
   "strengths": ["良い点1", "良い点2"],
   "feedback": [
@@ -160,7 +182,7 @@ def improve_script(script: dict, concept: dict, genre_cfg: dict, fmt: str,
     fmt_label = "ショート動画（55秒）" if is_shorts else "横型動画（5〜8分）"
     length_rule = "1文15文字以内・テンポよく・会話口調" if is_shorts else "1〜2文の短い単位・セクション橋渡しあり"
 
-    prompt = f"""あなたはYouTubeバイラルコンテンツの専門ライターです。
+    prompt = f"""あなたはYouTube Shortsバイラルコンテンツの専門ライターです。
 以下の原稿を評価フィードバックを元に改善してください。（改善試行: {attempt}/{MAX_RETRIES}回目）
 
 【動画フォーマット】{fmt_label}
@@ -169,10 +191,10 @@ def improve_script(script: dict, concept: dict, genre_cfg: dict, fmt: str,
 
 【現在のスコア】{eval_result['total']}/100点（合格ライン: {PASS_SCORE}点）
   フック強度: {axes.get('hook', 0)}/20
-  好奇心ギャップ: {axes.get('curiosity', 0)}/20
-  テンポ: {axes.get('tempo', 0)}/20
+  遅延ペイオフ構造: {axes.get('payoff', 0)}/20
+  ループ・テンポ: {axes.get('loop_tempo', 0)}/20
   感情トリガー: {axes.get('emotion', 0)}/20
-  具体性: {axes.get('specificity', 0)}/20
+  CTA・具体性: {axes.get('cta_specificity', 0)}/20
 
 【良い点（維持すること）】
 {strengths_str}
@@ -260,9 +282,11 @@ def evaluate_and_improve(run_dir: Path, genre_cfg: dict,
         eval_log.append({"attempt": attempt, "score": total, "eval": eval_result})
 
         print(f"[02b] スコア: {total}/100点  "
-              f"[フック:{axes.get('hook',0)} 好奇心:{axes.get('curiosity',0)} "
-              f"テンポ:{axes.get('tempo',0)} 感情:{axes.get('emotion',0)} "
-              f"具体性:{axes.get('specificity',0)}]")
+              f"[フック:{axes.get('hook',0)} "
+              f"遅延ペイオフ:{axes.get('payoff',0)} "
+              f"ループ/テンポ:{axes.get('loop_tempo',0)} "
+              f"感情:{axes.get('emotion',0)} "
+              f"CTA/具体性:{axes.get('cta_specificity',0)}]")
 
         # ベストスコアを記録
         if total > best_score:
