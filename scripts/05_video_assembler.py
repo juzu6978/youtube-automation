@@ -94,12 +94,17 @@ def build_ass(timings: list[dict], output_path: Path,
 # ─────────────────────────────────────────────
 
 def select_clips(clips: list[dict], narration_duration_ms: int,
-                 timings: list[dict]) -> list[dict]:
+                 timings: list[dict],
+                 transition_buffer_sec: float = 0.0) -> list[dict]:
     """
     ナレーション尺を埋めるクリップリストを返す。
     各要素は {"path": str, "duration": float} の dict。
+
+    transition_buffer_sec: xfadeで失われる尺の補正値
+      = transition_sec × (クリップ数 - 1) の概算。
+      実際のクリップ数は不明なので呼び出し元が大きめに渡す。
     """
-    total_sec = narration_duration_ms / 1000
+    total_sec = narration_duration_ms / 1000 + transition_buffer_sec
 
     # セクションごとのクリップをマッピング
     section_clips: dict[str, list] = {}
@@ -347,7 +352,11 @@ def assemble_video(run_dir: Path, settings: dict, fmt: str = "landscape") -> Pat
               width=vid_width, height=vid_height)
 
     # ── クリップ選択 ──
-    ordered_clips = select_clips(clips, narration_ms, timings)
+    # xfade で失われる尺を補正（transition_sec × 最大トランジション数の概算を余裕込みで確保）
+    transition_sec = float(video_cfg.get("transition_sec", 0.5))
+    transition_buffer = transition_sec * 20  # 最大20クリップ分のバッファ（多めに確保）
+    ordered_clips = select_clips(clips, narration_ms, timings,
+                                 transition_buffer_sec=transition_buffer)
 
     # ── スケールフィルタ ──
     if fmt in SHORT_FORMATS:
@@ -406,7 +415,10 @@ def assemble_video(run_dir: Path, settings: dict, fmt: str = "landscape") -> Pat
          "-i", str(audio_input),
          "-vf", subtitle_filter if subtitle_filter else "null"]
         + quality_flags
-        + ["-shortest", str(output_path)]
+        # -shortest の代わりに明示的な -t を使用。
+        # -shortest はベース動画がナレーションより短い場合（xfade尺縮み等）に
+        # 動画を途中で強制カットしてしまうため使用しない。
+        + ["-t", str(narration_sec), str(output_path)]
     )
 
     print("[05] 字幕・音声ミックス中...")
