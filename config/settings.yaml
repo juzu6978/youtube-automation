@@ -81,7 +81,7 @@ shorts:
 
   subtitle:
     font_size: 100            # 20×5
-    margin_v: 300             # 説明欄・いいね・コメントボタン（下部約300px）と重ならない位置
+    margin_v: 400             # 説明欄・いいね・コメントボタンと重ならない位置
 
   thumbnail:
     width: 1080
