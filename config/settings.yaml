@@ -45,7 +45,7 @@ audio:
   ducking_release_ms: 500     # ダッキング解除時間（ms）
 
 tts:
-  provider: "google_tts"      # デフォルトプロバイダー
+  provider: "edge_tts"        # edge_tts（無料・推奨）/ google_tts（要GCP認証）
   language_code: "ja-JP"
   audio_encoding: "MP3"
   effects_profile: ["headphone-class-device"]

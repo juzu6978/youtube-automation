@@ -31,8 +31,8 @@ content:
   default_language: "ja"
 
 tts:
-  voice_id: "ja-JP-Neural2-C"   # 落ち着いた男性声
-  provider: "google_tts"
+  provider: "edge_tts"           # 無料・APIキー不要（google_tts に戻す場合は変更）
+  voice_id: "ja-JP-NanamiNeural" # 自然な女性声（他: KeitaNeural男性 / ShioriNeural女性 / DaichiNeural男性）
   speaking_rate: 1.5
   pitch: 0.0
 

@@ -3,7 +3,10 @@
 # Anthropic Claude API
 anthropic>=0.30.0
 
-# Google Cloud TTS
+# Edge TTS（Microsoft・無料・推奨）
+edge-tts>=6.1.9
+
+# Google Cloud TTS（フォールバック・要GCP認証）
 google-cloud-texttospeech>=2.16.0
 
 # YouTube Data API + Analytics API
