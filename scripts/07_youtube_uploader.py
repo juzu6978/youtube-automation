@@ -131,9 +131,36 @@ def upload_thumbnail(youtube, video_id: str, thumbnail_path: Path, dry_run: bool
         print(f"[07] DRY RUN: サムネイルアップロードをスキップします")
         return
 
+    from googleapiclient.errors import HttpError
+
     media = MediaFileUpload(str(thumbnail_path), mimetype="image/jpeg")
-    youtube.thumbnails().set(videoId=video_id, media_body=media).execute()
-    print(f"[07] サムネイルアップロード完了")
+
+    # 429 レート制限は指数バックオフでリトライ（最大4回）
+    wait_times = [30, 60, 120, 240]  # 秒
+    for attempt, wait in enumerate(wait_times, 1):
+        try:
+            youtube.thumbnails().set(videoId=video_id, media_body=media).execute()
+            print(f"[07] サムネイルアップロード完了")
+            return
+        except HttpError as e:
+            if e.status_code == 429:
+                if attempt <= len(wait_times) - 1:
+                    print(f"[07] サムネイルレート制限 (429)。{wait}秒後にリトライ ({attempt}/{len(wait_times)})...")
+                    time.sleep(wait)
+                    # MediaFileUpload を再生成（ストリームをリセット）
+                    media = MediaFileUpload(str(thumbnail_path), mimetype="image/jpeg")
+                else:
+                    print(f"[07] ⚠️  サムネイルアップロード失敗（レート制限）。動画は投稿済みです。")
+                    print(f"[07]    video_id={video_id} に後でサムネイルを手動設定してください。")
+                    return   # 例外を投げずに続行（動画投稿自体は成功）
+            else:
+                print(f"[07] ⚠️  サムネイルアップロードエラー (HTTP {e.status_code}): {e}")
+                print(f"[07]    動画は投稿済みです。サムネイルのみ手動設定してください。")
+                return   # 非429エラーも動画投稿を失敗扱いにしない
+        except Exception as e:
+            print(f"[07] ⚠️  サムネイルアップロード予期せぬエラー: {e}")
+            print(f"[07]    動画は投稿済みです。サムネイルのみ手動設定してください。")
+            return
 
 
 def upload_pipeline(account_id: str, run_id: str, settings: dict,
