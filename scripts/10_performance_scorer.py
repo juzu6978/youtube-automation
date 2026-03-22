@@ -177,10 +177,29 @@ def generate_workflow_for_account(account_id: str, dry_run: bool):
     upload_hour = cfg["schedule"]["upload_hour_utc"]
     acct_num = account_id.split("_")[-1]
 
-    cron_lines = "\n".join(
-        [f'    - cron: "0 {upload_hour} * * {DAY_TO_CRON_NUM[d]}"  # {d.capitalize()}'
-         for d in upload_days]
-    )
+    # accounts_registry.yaml の enabled フラグを確認
+    registry_path = Path("config/accounts/accounts_registry.yaml")
+    is_enabled = False
+    if registry_path.exists():
+        import yaml as _yaml
+        with open(registry_path, encoding="utf-8") as f:
+            registry = _yaml.safe_load(f)
+        for entry in registry.get("accounts", []):
+            if entry["id"] == account_id:
+                is_enabled = entry.get("enabled", False)
+                break
+
+    # enabled なアカウントのみ schedule を生成（無効アカウントは workflow_dispatch のみ）
+    if is_enabled:
+        cron_lines = "\n".join(
+            [f'    - cron: "0 {upload_hour} * * {DAY_TO_CRON_NUM[d]}"  # {d.capitalize()}'
+             for d in upload_days]
+        )
+        schedule_block = f"  schedule:\n{cron_lines}\n"
+        schedule_note = f"({', '.join(upload_days)})"
+    else:
+        schedule_block = "  # schedule は無効（account_01 のみ定期実行対象）\n"
+        schedule_note = "(定期実行なし・手動のみ)"
 
     # シークレット名のサフィックス（例: account_01 → ACCT01）
     secret_suffix = f"ACCT{acct_num.upper()}"
@@ -190,9 +209,7 @@ def generate_workflow_for_account(account_id: str, dry_run: bool):
 name: Upload - {account_id} ({cfg['account']['display_name']})
 
 on:
-  schedule:
-{cron_lines}
-  workflow_dispatch:
+{schedule_block}  workflow_dispatch:
 
 jobs:
   upload:
@@ -213,9 +230,9 @@ jobs:
 
     if not dry_run:
         workflow_path.write_text(workflow_content, encoding="utf-8")
-        print(f"[10] ワークフロー生成: {workflow_path} ({', '.join(upload_days)})")
+        print(f"[10] ワークフロー生成: {workflow_path} {schedule_note}")
     else:
-        print(f"[10] DRY RUN: {workflow_path} を生成予定 ({', '.join(upload_days)})")
+        print(f"[10] DRY RUN: {workflow_path} を生成予定 {schedule_note}")
 
 
 # ─────────────────────────────────────────────────────────

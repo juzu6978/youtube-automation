@@ -4,9 +4,7 @@
 name: Upload - account_03 (ライフハックチャンネル)
 
 on:
-  schedule:
-    - cron: "0 14 * * 1"  # Monday
-    - cron: "0 14 * * 4"  # Thursday
+  # schedule は無効（account_01 のみ定期実行対象）
   workflow_dispatch:
     inputs:
       dry_run:

@@ -4,9 +4,7 @@
 name: Upload - account_05 (お金・投資入門チャンネル)
 
 on:
-  schedule:
-    - cron: "0 14 * * 2"  # Tuesday
-    - cron: "0 14 * * 5"  # Friday
+  # schedule は無効（account_01 のみ定期実行対象）
   workflow_dispatch:
     inputs:
       dry_run:

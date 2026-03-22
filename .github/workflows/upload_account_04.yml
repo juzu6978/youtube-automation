@@ -4,9 +4,7 @@
 name: Upload - account_04 (歴史・偉人解説チャンネル)
 
 on:
-  schedule:
-    - cron: "0 14 * * 3"  # Wednesday
-    - cron: "0 14 * * 0"  # Sunday
+  # schedule は無効（account_01 のみ定期実行対象）
   workflow_dispatch:
     inputs:
       dry_run:
