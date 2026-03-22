@@ -65,12 +65,53 @@ def ms_to_ass_time(ms: int) -> str:
     return f"{h}:{m:02d}:{s:02d}.{cs:02d}"
 
 
+def wrap_subtitle_text(text: str, max_chars: int) -> str:
+    """
+    字幕テキストを指定文字数で折り返す（ASS形式の改行 \\N を挿入）。
+
+    日本語1文字 ≈ font_size px なので、画面幅に収まる文字数で折り返す。
+    句読点（。、！？）の直後を優先的な分割点とし、なければ max_chars でカット。
+
+    Args:
+        text:      折り返し対象テキスト（既存の \\N は保持）
+        max_chars: 1行の最大文字数
+
+    Returns:
+        \\N を挿入した折り返し済みテキスト
+    """
+    # 既存の改行を一旦スペースに正規化して処理
+    text = text.replace("\\N", "\n")
+    result_lines: list[str] = []
+
+    for paragraph in text.split("\n"):
+        if len(paragraph) <= max_chars:
+            result_lines.append(paragraph)
+            continue
+
+        # max_chars を超える段落を折り返す
+        remaining = paragraph
+        while len(remaining) > max_chars:
+            # 句読点の後を優先的な分割点として探す（max_chars 以内で最も後ろ）
+            split_pos = max_chars
+            for i in range(max_chars, 0, -1):
+                if remaining[i - 1] in "。、！？!?・…":
+                    split_pos = i
+                    break
+            result_lines.append(remaining[:split_pos])
+            remaining = remaining[split_pos:]
+        if remaining:
+            result_lines.append(remaining)
+
+    return "\\N".join(result_lines)
+
+
 def build_ass(timings: list[dict], output_path: Path,
               sub_cfg: dict, global_sub: dict,
               reveal_ms: int, width: int, height: int):
     """
     timings.json から ASS 字幕ファイルを生成する。
     \\fad() でフェードインアニメーションを付与する。
+    長い行は \\N で自動折り返しする。
     """
     font_name    = global_sub.get("font_name", "Noto Sans CJK JP")
     font_size    = sub_cfg.get("font_size", 65)
@@ -81,6 +122,13 @@ def build_ass(timings: list[dict], output_path: Path,
     outline_size = global_sub.get("outline_size", 3)
     shadow_size  = global_sub.get("shadow_size", 1)
     margin_v     = sub_cfg.get("margin_v", 400)
+
+    # 1行に収まる最大文字数を計算
+    # 日本語1文字 ≈ font_size px、左右マージン合計 = width * 0.10 を確保
+    margin_lr = width * 0.10          # 左右マージン合計
+    usable_px = width - margin_lr     # 文字を表示できる横幅
+    max_chars = max(6, int(usable_px / font_size))
+    print(f"[05] 字幕折り返し: {max_chars}文字/行（フォントサイズ{font_size}px / 画面幅{width}px）")
 
     header = (
         "[Script Info]\n"
@@ -106,7 +154,8 @@ def build_ass(timings: list[dict], output_path: Path,
     for t in timings:
         start = ms_to_ass_time(t["start_ms"])
         end   = ms_to_ass_time(t["end_ms"])
-        text  = t["text"].replace("\n", "\\N")
+        # 長い行を自動折り返し
+        text  = wrap_subtitle_text(t["text"], max_chars)
         anim  = f"{{\\fad({reveal_ms},0)}}"
         dialogue_lines.append(
             f"Dialogue: 0,{start},{end},Default,,0,0,0,,{anim}{text}"
