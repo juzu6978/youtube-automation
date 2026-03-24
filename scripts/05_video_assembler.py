@@ -107,7 +107,8 @@ def wrap_subtitle_text(text: str, max_chars: int) -> str:
 
 def build_ass(timings: list[dict], output_path: Path,
               sub_cfg: dict, global_sub: dict,
-              reveal_ms: int, width: int, height: int):
+              reveal_ms: int, width: int, height: int,
+              is_shorts: bool = False):
     """
     timings.json から ASS 字幕ファイルを生成する。
     \\fad() でフェードインアニメーションを付与する。
@@ -124,11 +125,18 @@ def build_ass(timings: list[dict], output_path: Path,
     margin_v     = sub_cfg.get("margin_v", 400)
 
     # 1行に収まる最大文字数を計算
-    # 日本語1文字 ≈ font_size px、左右マージン合計 = width * 0.10 を確保
-    margin_lr = width * 0.10          # 左右マージン合計
-    usable_px = width - margin_lr     # 文字を表示できる横幅
-    max_chars = max(6, int(usable_px / font_size))
-    print(f"[05] 字幕折り返し: {max_chars}文字/行（フォントサイズ{font_size}px / 画面幅{width}px）")
+    if is_shorts:
+        # Shorts は縦型画面で文字が大きいため15文字固定
+        max_chars = 15
+        print(f"[05] 字幕折り返し: {max_chars}文字/行（Shorts固定）")
+    else:
+        # 日本語1文字 ≈ font_size px、左右マージン合計 = width * 0.10 を確保
+        margin_lr = width * 0.10
+        usable_px = width - margin_lr
+        formula_max = max(6, int(usable_px / font_size))
+        cfg_max = sub_cfg.get("max_chars") or global_sub.get("max_chars")
+        max_chars = min(int(cfg_max), formula_max) if cfg_max else formula_max
+        print(f"[05] 字幕折り返し: {max_chars}文字/行（設定上限: {cfg_max} / 画面計算値: {formula_max}）")
 
     header = (
         "[Script Info]\n"
@@ -419,7 +427,8 @@ def assemble_video(run_dir: Path, settings: dict, fmt: str = "landscape") -> Pat
               sub_cfg=sub_cfg,
               global_sub=settings["subtitle"],
               reveal_ms=reveal_ms,
-              width=vid_width, height=vid_height)
+              width=vid_width, height=vid_height,
+              is_shorts=(fmt in SHORT_FORMATS))
 
     # ── クリップ選択（xfade尺ロス分のバッファを確保）──
     transition_sec    = float(video_cfg.get("transition_sec", 0.5))
@@ -439,14 +448,31 @@ def assemble_video(run_dir: Path, settings: dict, fmt: str = "landscape") -> Pat
 
     print(f"[05] 解像度: {resolution_label} / ナレーション尺: {narration_sec:.1f}s")
 
-    # ── ベース動画生成 ──
+    # ── 出力尺の確定 ──
+    # ffprobe による MP3 デュレーション読み取りは VBR ヘッダーで不正確になるため使用しない。
+    # 代わりに step 03 が pydub 実測値を narration_meta.json に書き出しているのでそちらを優先。
+    # 見つからない場合は timings 計算値 + 0.5s バッファでフォールバック。
+    meta_path = run_dir / "narration_meta.json"
+    if meta_path.exists():
+        with open(meta_path, encoding="utf-8") as f:
+            _meta = json.load(f)
+        output_sec = _meta["duration_sec"]
+        if abs(output_sec - narration_sec) > 0.1:
+            print(f"[05] 音声実尺（03より）: {output_sec:.2f}s / timings計算値: {narration_sec:.2f}s")
+    else:
+        # narration_meta.json がない場合（旧バージョンの互換性維持）
+        output_sec = narration_sec + 0.5
+        print(f"[05] ⚠️ narration_meta.json なし → timings計算値 + 0.5s バッファ: {output_sec:.2f}s")
+    print(f"[05] 出力尺: {output_sec:.2f}s")
+
+    # ── ベース動画生成（output_sec + バッファで生成）──
     base_video = build_base_video(
-        ordered_clips, narration_sec, scale_filter, video_cfg, run_dir
+        ordered_clips, output_sec, scale_filter, video_cfg, run_dir
     )
 
     # ── ベース動画尺チェック → 不足分は tpad で最終フレームを静止延長 ──
     actual_base_sec = get_video_duration(base_video)
-    shortfall = narration_sec - actual_base_sec
+    shortfall = output_sec - actual_base_sec
     if shortfall > 0.1:
         pad_sec = shortfall + 1.5  # 余裕を 1.5s 追加
         print(f"[05] tpad: {shortfall:.2f}s 不足 → {pad_sec:.2f}s 補完（最終フレーム静止）")
@@ -454,11 +480,11 @@ def assemble_video(run_dir: Path, settings: dict, fmt: str = "landscape") -> Pat
     else:
         tpad_filter = None
 
-    # ── BGM ミックス ──
+    # ── BGM ミックス（output_sec 基準でフェードアウト・トリム）──
     bgm_dir   = Path("assets/bgm")
     bgm_path  = next(bgm_dir.glob("*.mp3"), None) if bgm_dir.exists() else None
     audio_input = build_audio_mix(
-        narration_path, bgm_path, narration_sec,
+        narration_path, bgm_path, output_sec,
         settings.get("audio", {}), run_dir
     )
 
@@ -501,7 +527,7 @@ def assemble_video(run_dir: Path, settings: dict, fmt: str = "landscape") -> Pat
     if vf_filter:
         final_cmd += ["-vf", vf_filter]
 
-    final_cmd += quality_flags + ["-t", str(narration_sec), str(output_path)]
+    final_cmd += quality_flags + ["-t", str(output_sec), str(output_path)]
 
     print("[05] 最終合成中（字幕・音声ミックス）...")
     run_ffmpeg(final_cmd, "最終合成")

@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Dry run（投稿スキップ）"
+        description: "Dry run（投稿スキップ・カウンター更新なし）"
         type: boolean
         default: false
       use_sample:
@@ -19,7 +19,7 @@ on:
         type: boolean
         default: false
       topic:
-        description: "コンテンツライブラリから使用（例: chatgpt_work, smartphone_tips）空欄=Claude APIで自動生成"
+        description: "コンテンツライブラリから使用（例: long/chatgpt_work）空欄=shorts形式ならカウンターから自動選択"
         type: string
         default: ""
       format:
@@ -33,13 +33,66 @@ on:
           - tiktok
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      topic: ${{ steps.calc.outputs.topic }}
+      counter: ${{ steps.calc.outputs.counter }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: calc
+        name: Determine topic (counter-based for shorts, passthrough for others)
+        run: |
+          # 定期実行: トピック指定なし・カウンター不使用（Long形式をAI自動生成）
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "topic=" >> $GITHUB_OUTPUT
+            echo "counter=-1" >> $GITHUB_OUTPUT
+            echo "▶ 定期実行: Claude API でトピック自動生成"
+            exit 0
+          fi
+
+          # 手動実行でtopic指定がある場合はそちらを優先（カウンター不使用）
+          if [ -n "${{ inputs.topic }}" ]; then
+            echo "topic=${{ inputs.topic }}" >> $GITHUB_OUTPUT
+            echo "counter=-1" >> $GITHUB_OUTPUT
+            echo "▶ 手動指定トピック: ${{ inputs.topic }}"
+            exit 0
+          fi
+
+          # 手動実行・shorts形式・topic未指定 → カウンターから自動選択
+          if [ "${{ inputs.format }}" = "shorts" ]; then
+            COUNTER_FILE="assets/scripts/shorts/.run_counter"
+            COUNTER=$(cat "$COUNTER_FILE" 2>/dev/null || echo "0")
+            echo "現在のカウンター: $COUNTER"
+
+            if [ "$COUNTER" -ge 10 ]; then
+              echo "❌ 全スロット使用済みです（counter=$COUNTER）"
+              echo "shorts/ フォルダのコンテンツを補充し、.run_counter を 0 にリセットしてください。"
+              exit 1
+            fi
+
+            FOLDERS=("day01_run1" "day01_run2" "day02_run1" "day02_run2" "day03_run1" "day03_run2" "day04_run1" "day04_run2" "day05_run1" "day05_run2")
+            TOPIC="shorts/${FOLDERS[$COUNTER]}"
+
+            echo "topic=$TOPIC" >> $GITHUB_OUTPUT
+            echo "counter=$COUNTER" >> $GITHUB_OUTPUT
+            echo "▶ 選択フォルダ: $TOPIC (スロット $COUNTER / 9)"
+            exit 0
+          fi
+
+          # その他（landscape / tiktok / auto）・topic未指定 → AI自動生成
+          echo "topic=" >> $GITHUB_OUTPUT
+          echo "counter=-1" >> $GITHUB_OUTPUT
+          echo "▶ Claude API でトピック自動生成 (format=${{ inputs.format }})"
+
   upload:
+    needs: prepare
     uses: ./.github/workflows/upload_account.yml
     with:
       account_id: "account_01"
       dry_run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
       use_sample: ${{ github.event_name == 'workflow_dispatch' && inputs.use_sample || false }}
-      topic: ${{ github.event_name == 'workflow_dispatch' && inputs.topic || '' }}
+      topic: ${{ needs.prepare.outputs.topic }}
       format: ${{ github.event_name == 'workflow_dispatch' && inputs.format || 'auto' }}
     secrets:
       YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN_ACCT01 }}
@@ -49,3 +102,39 @@ jobs:
       GCP_CREDENTIALS_JSON: ${{ secrets.GCP_CREDENTIALS_JSON }}
       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
       PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+
+  increment:
+    needs: [prepare, upload]
+    runs-on: ubuntu-latest
+    # カウンター更新条件:
+    #   - アップロード成功
+    #   - counter != -1（カウンターを使用した実行のみ）
+    #   - dry_run=false
+    if: >
+      needs.upload.result == 'success' &&
+      needs.prepare.outputs.counter != '-1' &&
+      !(github.event_name == 'workflow_dispatch' && inputs.dry_run == true)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+      - name: Increment counter
+        run: |
+          COUNTER_FILE="assets/scripts/shorts/.run_counter"
+          CURRENT=$(cat "$COUNTER_FILE")
+          NEXT=$(( CURRENT + 1 ))
+          echo "$NEXT" > "$COUNTER_FILE"
+          echo "✅ カウンター更新: $CURRENT → $NEXT"
+
+          if [ "$NEXT" -ge 10 ]; then
+            echo "⚠️ 全スロットを使用しました。次回実行前にコンテンツを補充し .run_counter を 0 にリセットしてください。"
+          else
+            REMAINING=$(( 10 - NEXT ))
+            echo "📊 残りスロット: $REMAINING / 10"
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$COUNTER_FILE"
+          git commit -m "chore: shorts run_counter $CURRENT → $NEXT [skip ci]"
+          git push

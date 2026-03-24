@@ -169,7 +169,19 @@ def build_narration_with_timings(script: dict, account_cfg: dict,
     with open(timings_path, "w", encoding="utf-8") as f:
         json.dump(timings, f, ensure_ascii=False, indent=2)
 
-    duration_sec = len(narration) / 1000
+    # pydub の実測値を別ファイルに保存。
+    # MP3 を ffprobe で読んだときの VBR ヘッダー誤差を避けるため、
+    # 05_video_assembler.py はこちらの値を「正確な出力尺」として使用する。
+    duration_ms = len(narration)
+    meta_path = run_dir / "narration_meta.json"
+    with open(meta_path, "w", encoding="utf-8") as f:
+        json.dump({
+            "duration_ms": duration_ms,
+            "duration_sec": duration_ms / 1000,
+            "sentence_count": total,
+        }, f, ensure_ascii=False, indent=2)
+
+    duration_sec = duration_ms / 1000
     print(f"[03] ナレーション生成完了: {duration_sec:.1f}秒 / {total}文")
     return narration, timings
 

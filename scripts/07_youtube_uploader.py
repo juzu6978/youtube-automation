@@ -17,6 +17,7 @@ from pathlib import Path
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -106,6 +107,24 @@ def upload_video(youtube, video_path: Path, script: dict,
         media_body=media,
     )
 
+    # リトライしても解決しないエラー理由（即時失敗）
+    NON_RETRYABLE_REASONS = {
+        "uploadLimitExceeded",      # 1日のアップロード上限超過
+        "forbidden",                # 権限なし
+        "insufficientPermissions",  # スコープ不足
+        "accountDeleted",           # アカウント削除済み
+        "accountDisabled",          # アカウント停止
+    }
+
+    def _extract_reason(http_err: HttpError) -> str:
+        """HttpError の reason フィールドを安全に取得する"""
+        try:
+            details = json.loads(http_err.content.decode())
+            errors = details.get("error", {}).get("errors", [{}])
+            return errors[0].get("reason", "")
+        except Exception:
+            return ""
+
     response = None
     retry = 0
     while response is None:
@@ -114,6 +133,21 @@ def upload_video(youtube, video_path: Path, script: dict,
             if status:
                 pct = int(status.progress() * 100)
                 print(f"[07] アップロード中... {pct}%")
+        except HttpError as e:
+            reason = _extract_reason(e)
+            # 4xx 非リトライエラーは即時失敗（リトライ無意味）
+            if e.status_code in (400, 401, 403) and reason in NON_RETRYABLE_REASONS:
+                print(f"[07] ❌ アップロード不可 ({reason}): {e}")
+                if reason == "uploadLimitExceeded":
+                    print("[07]    本日のアップロード上限に達しました。明日以降に再実行してください。")
+                    print("[07]    ※ カウンターは更新されません（次回同じスロットから再試行できます）。")
+                raise
+            # その他エラーはリトライ
+            retry += 1
+            if retry > 3:
+                raise
+            print(f"[07] アップロードエラー (リトライ {retry}/3): {e}")
+            time.sleep(5 * retry)
         except Exception as e:
             retry += 1
             if retry > 3:
@@ -130,8 +164,6 @@ def upload_thumbnail(youtube, video_id: str, thumbnail_path: Path, dry_run: bool
     if dry_run or video_id == "DRY_RUN_VIDEO_ID":
         print(f"[07] DRY RUN: サムネイルアップロードをスキップします")
         return
-
-    from googleapiclient.errors import HttpError
 
     media = MediaFileUpload(str(thumbnail_path), mimetype="image/jpeg")
 

@@ -26,6 +26,7 @@ subtitle:
   shadow_size: 1              # ドロップシャドウ（px）
   margin_v: 30                # 画面下端からのマージン（px）
   reveal_ms: 600              # フェードインアニメーション時間(ms)（libassは\clip\t()未サポートのため\fad使用）
+  max_chars: 15               # 1行の最大文字数（計算値より小さい場合はこちらを優先）
 
 thumbnail:
   width: 1280
